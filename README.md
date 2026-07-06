@@ -15,10 +15,10 @@
 
 ## Documentation
 
-- 📖 **[Wiki](https://github.com/DooDesch-Mods/ScheduleOne-Personify/wiki)** - the full guide: editor
-  modes and controls, custom PNG import, exporting and publishing, troubleshooting.
-- 🧩 **[Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel)** - the framework the exported
-  packs run on.
+- 📖 **[Personnel wiki](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/wiki)** - the framework
+  the exported packs run on: pack format and id rules, the consumer API, custom PNG layer authoring
+  (UV alignment), multiplayer, troubleshooting.
+- This README is the full guide to the editor itself.
 
 ## Features
 
@@ -70,7 +70,21 @@ Side Hustle) are pulled in automatically.
 
 Custom PNG layers: drop PNGs into `UserData/Personify/Import/`, then use "+ Add custom layer" in
 Advanced mode. A layer PNG is a full UV-space texture (like Inkorporated tattoos) - opaque pixels
-land where the UV region of that body part sits.
+land where the UV region of that body part sits; the
+[authoring guide](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/wiki/Custom-PNG-Layers)
+covers alignment and sizes.
+
+Tips:
+
+- The **eye toggle** on a layer (Advanced) hides it from the live preview AND the export without
+  deleting it.
+- The **id** shown under the Name field (`packname_npcname`) is derived automatically and is exactly
+  what consumer mods reference; renaming an NPC changes its id.
+- **Base human** at the bottom toggles the untouched character for comparison.
+- Consumer-specific panels (e.g. a Backrooms binding) appear in Advanced only when that mod is
+  installed - plain pack authors never see them.
+- Projects are self-contained folders (`Projects/<name>/` incl. imported PNGs) and safe to copy
+  between machines.
 
 ## Configuration
 

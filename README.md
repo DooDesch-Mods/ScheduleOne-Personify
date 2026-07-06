@@ -13,6 +13,13 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 
+## Project status
+
+Personify 1.0.0 is an early release. The main flows - designing, live preview and export - are verified
+in-game, but the sheer breadth of combinations (every layer, pack size and setup) has not yet seen
+extended real-world testing. Expect it to mature over the coming releases; if something misbehaves, a
+report at [support.doodesch.de](https://support.doodesch.de) directly shapes the next version.
+
 ## Documentation
 
 - 📖 **[Personnel wiki](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/wiki)** - the framework

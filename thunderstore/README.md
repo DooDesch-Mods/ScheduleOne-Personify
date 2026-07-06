@@ -21,6 +21,10 @@
 - **One-click export** to a complete Personnel pack, wrapped Thunderstore-ready (manifest, README,
   LICENSE). Drop the pack into `UserData/Personnel/Packs/` to test; upload the wrapper to publish.
 
+**Early release:** the main flows are verified in-game, but 1.0.0 has not yet seen extended real-world
+testing - it will mature over the coming releases. Reports at
+[support.doodesch.de](https://support.doodesch.de) directly shape the next version.
+
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.

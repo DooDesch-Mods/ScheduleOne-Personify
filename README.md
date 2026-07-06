@@ -13,6 +13,13 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 
+## Documentation
+
+- 📖 **[Wiki](https://github.com/DooDesch-Mods/ScheduleOne-Personify/wiki)** - the full guide: editor
+  modes and controls, custom PNG import, exporting and publishing, troubleshooting.
+- 🧩 **[Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel)** - the framework the exported
+  packs run on.
+
 ## Features
 
 - **Live preview.** Every change is applied instantly to the menu character - rotate, zoom, and

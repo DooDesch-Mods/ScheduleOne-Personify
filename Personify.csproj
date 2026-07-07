@@ -5,6 +5,10 @@
   <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props')" />
   <Import Project="$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props')" />
 
+  <!-- Shared avatar bone-distortion helper (Experimental tab) - linked source, same dual-path pattern. -->
+  <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props')" />
+
   <!-- CI checks the build-libs Workspace out INSIDE the repo folder; keep its sources (Unity tooling, ui
        duplicates) out of the default compile glob. The props above re-add the ui files as linked source. -->
   <ItemGroup>
@@ -129,6 +133,11 @@
     </Reference>
     <Reference Include="UnityEngine.ImageConversionModule">
       <HintPath>$(GameManagedPath)/UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- SkinnedMeshRenderer (Experimental tab body-mesh hide, via AvatarDistortion.props). -->
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">

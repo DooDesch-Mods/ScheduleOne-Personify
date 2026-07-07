@@ -68,6 +68,13 @@ namespace Personify.Editor
             }
         }
 
+        // Runs in LateUpdate (after Animator evaluation) so bone distortion keeps winning against whatever vanilla
+        // system also drives HeadBone/etc. every Update - see Preview.ReassertDistortion.
+        public static void LateTick()
+        {
+            if (_selected != null) Preview.ReassertDistortion(_selected);
+        }
+
         private static void BuildCanvas()
         {
             _canvasGO = new GameObject("Personify_EditorCanvas");
@@ -339,7 +346,7 @@ namespace Personify.Editor
 
         // --- form (selected NPC) ---
 
-        private enum FormMode { Basic, Advanced }
+        private enum FormMode { Basic, Advanced, Experimental }
         private static FormMode _mode = FormMode.Basic;
 
         private static void RefreshForm()
@@ -358,20 +365,23 @@ namespace Personify.Editor
 
             ModeToggle();
             if (_mode == FormMode.Basic) BuildBasicForm(n);
-            else BuildAdvancedForm(n);
+            else if (_mode == FormMode.Advanced) BuildAdvancedForm(n);
+            else BuildExperimentalForm(n);
 
             Interactions.PolishButtons(_formContent);
         }
 
-        // A two-segment "Character | Advanced" switch at the top of the form. Character = a simplified, vanilla-
-        // character-creator-like view (single-select clothing/face slots + the essentials); Advanced = the full
-        // editor (every layer + knob).
+        // A three-segment "Character | Advanced | Experimental" switch at the top of the form. Character = a
+        // simplified, vanilla-character-creator-like view (single-select clothing/face slots + the essentials);
+        // Advanced = the full editor (every layer + knob); Experimental = extreme body distortion for Backrooms-style
+        // horror (unclamped bone scale/hide - not a vanilla look).
         private static void ModeToggle()
         {
             var row = new GameObject("mode"); row.transform.SetParent(_formContent, false); row.AddComponent<RectTransform>();
             var rle = row.AddComponent<LayoutElement>(); rle.minHeight = 34; rle.preferredHeight = 34; rle.flexibleWidth = 1;
-            var seg = Components.Segmented(row.transform, new[] { "Character", "Advanced" }, _mode == FormMode.Basic ? 0 : 1,
-                i => { _mode = i == 0 ? FormMode.Basic : FormMode.Advanced; RefreshForm(); }, out _);
+            int idx = _mode == FormMode.Basic ? 0 : _mode == FormMode.Advanced ? 1 : 2;
+            var seg = Components.Segmented(row.transform, new[] { "Character", "Advanced", "Experimental" }, idx,
+                i => { _mode = i == 0 ? FormMode.Basic : i == 1 ? FormMode.Advanced : FormMode.Experimental; RefreshForm(); }, out _);
             StretchFill(seg.GetComponent<RectTransform>());
         }
 
@@ -422,6 +432,63 @@ namespace Personify.Editor
             }
 
             BackroomsSection(n);   // gated on the Backrooms mod being installed
+        }
+
+        // Extreme body distortion for Backrooms-style horror: unclamped non-uniform bone scale (0-8x) or a full
+        // hide (zero-scale, collapsing the bone and everything below it) per bone, plus per-mesh hide toggles.
+        // Not part of vanilla AvatarSettings - applied as a separate pass by Preview/Personnel after the normal
+        // appearance load (DooDesch.AvatarKit.AvatarDistortion).
+        // canHide is false only for the skeleton root (Hips): zero-scaling it collapses every bone parented under
+        // it - i.e. the whole character, not just the hips - so hiding it isn't a locally-scoped effect and the
+        // control is intentionally not offered. Its scale sliders stay (stretching the whole rig is still useful).
+        // The other spine bones are interior nodes with a narrower, still-legible blast radius (e.g. hiding
+        // MiddleSpine removes the upper body but leaves hips/legs standing) so they keep their hide toggle.
+        private static readonly (string key, string label, bool canHide)[] BoneRows =
+        {
+            ("HeadBone", "Head", true), ("HipBone", "Hips", false),
+            ("LeftFootBone", "Left foot", true), ("RightFootBone", "Right foot", true),
+            ("LeftShoulder", "Left shoulder", true), ("RightShoulder", "Right shoulder", true),
+            ("MiddleSpine", "Mid spine", true), ("LowerSpine", "Lower spine", true), ("LowestSpine", "Lowest spine", true),
+        };
+
+        private static void BuildExperimentalForm(NpcDraft n)
+        {
+            AppearanceDraft a = n.Appearance;
+
+            Components.SectionHeader(_formContent, "Experimental - extreme distortion");
+            var warn = UIFactory.Text("warn", "Unclamped bone scale (0-8x) and part hiding. For Backrooms-style body horror, not a vanilla look.", _formContent, Theme.Caption, TextAnchor.UpperLeft);
+            warn.color = Theme.TextMuted; warn.raycastTarget = false; warn.horizontalOverflow = HorizontalWrapMode.Wrap; warn.gameObject.AddComponent<LayoutElement>().minHeight = 34;
+
+            foreach (var (key, label, canHide) in BoneRows) BoneDistortionRows(a, key, label, canHide);
+
+            Components.SectionHeader(_formContent, "Hide meshes");
+            MeshHideRow(a, DooDesch.AvatarKit.AvatarDistortion.FaceMeshKey, "Face mesh");
+            int bodyMeshCount = Preview.CurrentBodyMeshCount();
+            for (int i = 0; i < bodyMeshCount; i++)
+                MeshHideRow(a, DooDesch.AvatarKit.AvatarDistortion.BodyMeshKeyPrefix + i, "Body mesh " + i);
+        }
+
+        private static BoneDistortionDraft Dist(AppearanceDraft a, string key)
+        {
+            if (!a.Distortion.TryGetValue(key, out var d)) { d = new BoneDistortionDraft(); a.Distortion[key] = d; }
+            return d;
+        }
+
+        private static void BoneDistortionRows(AppearanceDraft a, string key, string label, bool canHide)
+        {
+            a.Distortion.TryGetValue(key, out BoneDistortionDraft d);
+            bool hidden = canHide && (d?.Hide ?? false);
+            if (canHide) ToggleRow(label + " - hide", hidden, v => { Dist(a, key).Hide = v; RefreshForm(); });
+            if (hidden) return;
+            SliderRow(label + " scale X", 0f, 8f, d?.ScaleX ?? 1f, v => Dist(a, key).ScaleX = v);
+            SliderRow(label + " scale Y", 0f, 8f, d?.ScaleY ?? 1f, v => Dist(a, key).ScaleY = v);
+            SliderRow(label + " scale Z", 0f, 8f, d?.ScaleZ ?? 1f, v => Dist(a, key).ScaleZ = v);
+        }
+
+        private static void MeshHideRow(AppearanceDraft a, string key, string label)
+        {
+            a.Distortion.TryGetValue(key, out BoneDistortionDraft d);
+            ToggleRow(label + " - hide", d?.Hide ?? false, v => Dist(a, key).Hide = v);
         }
 
         // The simplified, vanilla-character-creator-like view: gender/body/hair/skin, single-select Face and Clothing

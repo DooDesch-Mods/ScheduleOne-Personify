@@ -61,5 +61,10 @@ namespace Personify
         {
             if (Editor.EditorUI.IsOpen) Editor.EditorUI.Tick();
         }
+
+        public override void OnLateUpdate()
+        {
+            if (Editor.EditorUI.IsOpen) Editor.EditorUI.LateTick();
+        }
     }
 }

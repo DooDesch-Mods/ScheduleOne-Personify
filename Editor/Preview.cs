@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using DooDesch.AvatarKit;
 using Il2CppScheduleOne.AvatarFramework;
 using S1API.Rendering;
 using UnityEngine;
+using Avatar = Il2CppScheduleOne.AvatarFramework.Avatar;
 using S1MenuRig = Il2CppScheduleOne.UI.MainMenu.MainMenuRig;
 
 namespace Personify.Editor
@@ -55,9 +57,20 @@ namespace Personify.Editor
                 AvatarSettings s = BuildSettings(project, npc.Appearance);
                 if (s == null) return false;
                 _avatar.LoadAvatarSettings(s);
+                AvatarDistortion.Apply(_avatar, ToDistortionEntries(npc.Appearance.Distortion));
                 return true;
             }
             catch (Exception e) { Core.Log?.Warning("[preview] apply: " + e.Message); return false; }
+        }
+
+        /// <summary>Re-applies just the bone/mesh distortion (cheap - no AvatarSettings rebuild). Called every
+        /// LateUpdate while the editor is open so it keeps winning against whatever vanilla system (Animator idle
+        /// clip, AvatarEffects, ...) also drives these same bones every Update - a one-shot apply isn't enough since
+        /// that system reasserts its own values every frame too.</summary>
+        public static void ReassertDistortion(NpcDraft npc)
+        {
+            if (_avatar == null || npc?.Appearance == null) return;
+            AvatarDistortion.Apply(_avatar, ToDistortionEntries(npc.Appearance.Distortion));
         }
 
         /// <summary>Restore the untouched menu character (called on editor close).</summary>
@@ -67,9 +80,25 @@ namespace Personify.Editor
             {
                 RestoreRig();
                 if (_avatar != null && _menuBaseline != null)
+                {
                     _avatar.LoadAvatarSettings(BuildSettings(null, _menuBaseline));
+                    AvatarDistortion.Apply(_avatar, ToDistortionEntries(_menuBaseline.Distortion));   // reset any bone scale left over from editing
+                }
             }
             catch (Exception e) { Core.Log?.Warning("[preview] exit: " + e.Message); }
+        }
+
+        /// <summary>How many body meshes the live avatar has - drives how many "Body mesh N" hide rows the
+        /// Experimental tab shows.</summary>
+        public static int CurrentBodyMeshCount() => EnsureAvatar() && _avatar?.BodyMeshes != null ? _avatar.BodyMeshes.Length : 0;
+
+        private static Dictionary<string, (Vector3 scale, bool hide)> ToDistortionEntries(Dictionary<string, BoneDistortionDraft> src)
+        {
+            var outp = new Dictionary<string, (Vector3, bool)>();
+            if (src == null) return outp;
+            foreach (var kv in src)
+                if (kv.Value != null) outp[kv.Key] = (new Vector3(kv.Value.ScaleX, kv.Value.ScaleY, kv.Value.ScaleZ), kv.Value.Hide);
+            return outp;
         }
 
         /// <summary>Drop the cached avatar + owned textures (call when leaving the menu scene).</summary>

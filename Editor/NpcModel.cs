@@ -17,6 +17,18 @@ namespace Personify.Editor
         [JsonProperty("visible")] public bool Visible { get; set; } = true;
     }
 
+    /// <summary>One bone's (or mesh's) extreme distortion: non-uniform scale, or fully hidden. Keyed in
+    /// <see cref="AppearanceDraft.Distortion"/> by bone name (see DooDesch.AvatarKit.AvatarDistortion.BoneKeys) or
+    /// mesh pseudo-key ("FaceMesh", "BodyMesh0", ...). Not expressible in vanilla AvatarSettings - applied as a
+    /// separate pass after the normal appearance load.</summary>
+    public sealed class BoneDistortionDraft
+    {
+        [JsonProperty("scaleX")] public float ScaleX { get; set; } = 1f;
+        [JsonProperty("scaleY")] public float ScaleY { get; set; } = 1f;
+        [JsonProperty("scaleZ")] public float ScaleZ { get; set; } = 1f;
+        [JsonProperty("hide")] public bool Hide { get; set; } = false;
+    }
+
     /// <summary>The full editable avatar look (mirror of the vanilla AvatarSettings knobs). Colours are hex strings.</summary>
     public sealed class AppearanceDraft
     {
@@ -42,6 +54,8 @@ namespace Personify.Editor
         [JsonProperty("faceLayers")] public List<LayerDraft> FaceLayers { get; set; } = new List<LayerDraft>();
         [JsonProperty("bodyLayers")] public List<LayerDraft> BodyLayers { get; set; } = new List<LayerDraft>();
         [JsonProperty("accessories")] public List<LayerDraft> Accessories { get; set; } = new List<LayerDraft>();
+        /// <summary>Experimental-tab extreme body distortion. Keyed by bone/mesh name; sparse (untouched NPC = empty).</summary>
+        [JsonProperty("distortion")] public Dictionary<string, BoneDistortionDraft> Distortion { get; set; } = new Dictionary<string, BoneDistortionDraft>();
     }
 
     /// <summary>S1API-expressible behaviour/stat defaults (only exported when <see cref="Enabled"/>).</summary>

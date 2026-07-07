@@ -121,7 +121,8 @@ namespace Personify.Editor
                     eyeballMaterial = a.EyeballMaterial, eyeBallTint = a.EyeBallTint, pupilDilation = a.PupilDilation,
                     faceLayers = ExportLayers(project, a.FaceLayers, "face", packDir, usedFiles),
                     bodyLayers = ExportLayers(project, a.BodyLayers, "body", packDir, usedFiles),
-                    accessories = ExportAccessories(a.Accessories)
+                    accessories = ExportAccessories(a.Accessories),
+                    distortion = a.Distortion.Count == 0 ? null : ExportDistortion(a.Distortion)
                 };
 
                 var entry = new PkNpc { id = Ids.Make(project.Name, npc.Name), name = npc.Name, appearance = pa };
@@ -176,6 +177,14 @@ namespace Personify.Editor
                     outp.Add(new PkLayer { path = l.Path, tint = l.Tint });
                 }
             }
+            return outp;
+        }
+
+        private static Dictionary<string, PkBone> ExportDistortion(Dictionary<string, BoneDistortionDraft> src)
+        {
+            var outp = new Dictionary<string, PkBone>();
+            foreach (var kv in src)
+                if (kv.Value != null) outp[kv.Key] = new PkBone { scaleX = kv.Value.ScaleX, scaleY = kv.Value.ScaleY, scaleZ = kv.Value.ScaleZ, hide = kv.Value.Hide };
             return outp;
         }
 
@@ -320,6 +329,7 @@ Thunderstore requires a 256x256 `icon.png` in this folder before upload - add on
         private sealed class PkEye { public float top; public float bottom; }
         private sealed class PkLayer { public string path; public string file; public string kind; public string tint; public string color; }
         private sealed class PkBehav { public float aggression; public float maxHealth; public float scale; public string conversation; }
+        private sealed class PkBone { public float? scaleX, scaleY, scaleZ; public bool? hide; }
 
         private sealed class PkAppear
         {
@@ -331,6 +341,7 @@ Thunderstore requires a 256x256 `icon.png` in this folder before upload - add on
             public string eyeballMaterial, eyeBallTint;
             public float pupilDilation;
             public List<PkLayer> faceLayers, bodyLayers, accessories;
+            public Dictionary<string, PkBone> distortion;
         }
 
         private sealed class TsManifest { public string name; public string version_number; public string website_url; public string description; public string[] dependencies; }

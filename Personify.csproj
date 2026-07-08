@@ -5,15 +5,17 @@
   <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props')" />
   <Import Project="$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props')" />
 
-  <!-- Shared avatar bone-distortion helper (Experimental tab) - linked source, same dual-path pattern. -->
-  <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props')" />
-  <Import Project="$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props')" />
-
   <!-- CI checks the build-libs Workspace out INSIDE the repo folder; keep its sources (Unity tooling, ui
-       duplicates) out of the default compile glob. The props above re-add the ui files as linked source. -->
+       duplicates) out of the default compile glob. Linked sources are re-added AFTER this removal via props. -->
   <ItemGroup>
     <Compile Remove="Workspace/**/*.cs" />
   </ItemGroup>
+
+  <!-- Shared avatar bone-distortion helper (namespace DooDesch.AvatarKit), linked source. Imported AFTER the
+       Workspace glob-removal above so the linked file survives it (in CI the Workspace/avatar/... subfolder path
+       would otherwise be stripped). Dual-path: local sibling or CI subfolder. -->
+  <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props')" />
 
   <!--
     Personify - MelonLoader IL2CPP in-game NPC editor for Schedule I (editor half of the Personnel/Personify pair,

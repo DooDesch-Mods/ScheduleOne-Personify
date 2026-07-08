@@ -3,6 +3,16 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-07-08
+
+### Added
+
+- Quick-pick chips for the game's standard clothing colours in the colour picker.
+
+### Changed
+
+- Clothing colour is easier to find: clothing rows now show a labelled "Colour" swatch.
+
 ## [1.0.0] - 2026-07-06
 
 Initial release.

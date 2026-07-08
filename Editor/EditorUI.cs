@@ -545,7 +545,7 @@ namespace Personify.Editor
             // Backrooms binding is intentionally NOT in the Character view - it lives in the Advanced tab (and only
             // when the Backrooms mod is installed).
 
-            var hint = UIFactory.Text("hint", "Advanced tab: stacked/extra layers, custom PNG layers, per-layer visibility, tint, Backrooms binding & full behaviour.", _formContent, Theme.Caption, TextAnchor.UpperLeft);
+            var hint = UIFactory.Text("hint", "Tip: pick a Top/Bottom, then tap its Colour swatch to recolour it. Advanced tab: stacked/custom PNG layers, per-layer visibility & full behaviour.", _formContent, Theme.Caption, TextAnchor.UpperLeft);
             hint.color = Theme.TextMuted; hint.raycastTarget = false; hint.horizontalOverflow = HorizontalWrapMode.Wrap; hint.gameObject.AddComponent<LayoutElement>().minHeight = 44;
         }
 
@@ -706,12 +706,17 @@ namespace Personify.Editor
                     RefreshForm(); MarkDirty();
                 })));
 
-            if (withTint && current != null)   // trailing tint swatch (only for coloured slots with a value set)
+            if (withTint && current != null)   // trailing colour control (only for slots with a value set)
             {
+                var swLbl = UIFactory.Text("swl", "Colour", row.transform, Theme.Caption, TextAnchor.MiddleRight);
+                swLbl.color = Theme.TextMuted; swLbl.raycastTarget = false;
+                var swlle = swLbl.gameObject.AddComponent<LayoutElement>(); swlle.minWidth = 46; swlle.preferredWidth = 46; swlle.flexibleWidth = 0;
+
                 var swGO = new GameObject("sw"); swGO.transform.SetParent(row.transform, false);
                 var swImg = swGO.AddComponent<Image>(); swImg.sprite = Theme.RoundedSprite(); swImg.type = Image.Type.Sliced; swImg.color = Preview.Hex(current.Tint, Color.white);
+                var swOutline = swGO.AddComponent<Outline>(); swOutline.effectColor = Theme.HairlineStrong; swOutline.effectDistance = new Vector2(1, -1);
                 var swBtn = swGO.AddComponent<Button>(); swBtn.targetGraphic = swImg;
-                var swle = swGO.AddComponent<LayoutElement>(); swle.minWidth = 26; swle.preferredWidth = 26;
+                var swle = swGO.AddComponent<LayoutElement>(); swle.minWidth = 30; swle.preferredWidth = 30;
                 LayerDraft cap = current;
                 swBtn.onClick.AddListener((UnityAction)(() =>
                     ColorPicker.Show(_canvasGO.transform, label + " colour", cap.Tint, hx => { cap.Tint = hx; swImg.color = Preview.Hex(hx, Color.white); MarkDirty(); })));

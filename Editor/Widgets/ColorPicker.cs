@@ -17,9 +17,14 @@ namespace Personify.Editor.Widgets
     /// </summary>
     public static class ColorPicker
     {
+        // The game's standard clothing palette (the 27 EClothingColor names), so recolouring an NPC's clothes
+        // lands on the familiar in-game colours in one tap. NPC layer tints are free RGBA, so the R/G/B sliders
+        // below still allow any custom colour - these are just quick picks.
         private static readonly string[] Presets =
         {
-            "#FFFFFF", "#000000", "#96785F", "#101014", "#C84A54", "#2FA877", "#3D7FC0", "#5E6AD2",
+            "#FFFFFF", "#C8C8C8", "#6E6E6E", "#3C3C3C", "#141414", "#FF6B6B", "#D6342C", "#9C1B2E", "#E8862B",
+            "#C8A165", "#6E4423", "#FF7F5C", "#E8D8B0", "#F2D14A", "#A6D63C", "#6FCB6F", "#2E7D32", "#3FC8C8",
+            "#6EC6E8", "#2F6FD6", "#24408E", "#1B2A4A", "#4A2E8E", "#7A3FB0", "#C83FB0", "#F25CB0", "#FF4FA3",
         };
 
         public static void Show(Transform canvasRoot, string title, string initialHex, Action<string> onConfirm)
@@ -39,7 +44,7 @@ namespace Personify.Editor.Widgets
             var cimg = card.GetComponent<Image>(); if (cimg != null) { cimg.sprite = Theme.RoundedSprite(); cimg.type = Image.Type.Sliced; }
             var crt = card.GetComponent<RectTransform>();
             crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f); crt.pivot = new Vector2(0.5f, 0.5f);
-            crt.sizeDelta = new Vector2(420, 380);
+            crt.sizeDelta = new Vector2(420, 468);
             var ol = card.AddComponent<Outline>(); ol.effectColor = Theme.HairlineStrong; ol.effectDistance = new Vector2(1, -1);
 
             // A full-width "band" positioned `top` px below the card's top edge - the layout unit every row below
@@ -139,16 +144,16 @@ namespace Personify.Editor.Widgets
             presetLabel.color = Theme.TextMuted; presetLabel.raycastTarget = false;
             var plrt = presetLabel.rectTransform; plrt.anchorMin = Vector2.zero; plrt.anchorMax = Vector2.one; plrt.offsetMin = Vector2.zero; plrt.offsetMax = Vector2.zero;
 
-            var presetBand = Band(262, 28);
-            var ph = presetBand.gameObject.AddComponent<HorizontalLayoutGroup>();
-            ph.spacing = 6; ph.childAlignment = TextAnchor.MiddleLeft;
-            ph.childControlWidth = true; ph.childControlHeight = true; ph.childForceExpandWidth = false; ph.childForceExpandHeight = true;
+            var presetBand = Band(262, 96);
+            var pg = presetBand.gameObject.AddComponent<GridLayoutGroup>();
+            pg.cellSize = new Vector2(28, 26); pg.spacing = new Vector2(6, 6);
+            pg.childAlignment = TextAnchor.UpperLeft;
+            pg.constraint = GridLayoutGroup.Constraint.FixedColumnCount; pg.constraintCount = 9;
             foreach (string hex in Presets)
             {
                 var pGO = new GameObject("preset"); pGO.transform.SetParent(presetBand, false);
                 var pImg = pGO.AddComponent<Image>(); pImg.sprite = Theme.RoundedSprite(); pImg.type = Image.Type.Sliced; pImg.color = Preview.Hex(hex, Color.white);
                 var pBtn = pGO.AddComponent<Button>(); pBtn.targetGraphic = pImg;
-                var ple = pGO.AddComponent<LayoutElement>(); ple.minWidth = 28; ple.preferredWidth = 28;
                 string captured = hex;
                 pBtn.onClick.AddListener((UnityAction)(() =>
                 {

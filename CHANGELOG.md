@@ -3,6 +3,14 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-07-10
+
+### Fixed
+
+- Released builds now compile the shared UI layer into Personify itself instead of silently borrowing it
+  from SideHustle.dll, so a future Side Hustle update can no longer break the editor at launch.
+- The mod now reports its real version to MelonLoader (previous releases always said 1.0.0).
+
 ## [1.1.0] - 2026-07-08
 
 ### Added

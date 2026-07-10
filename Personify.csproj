@@ -1,19 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- CI checks the build-libs Workspace out INSIDE the repo folder; keep its sources (Unity tooling, ui
+       duplicates) out of the default compile glob. Linked sources are re-added AFTER this removal via props -
+       every Workspace props import must therefore come below this ItemGroup, or its includes get stripped
+       again in CI and the types silently bind from a referenced assembly (e.g. DooDesch.UI out of
+       SideHustle.dll) instead of compiling in. -->
+  <ItemGroup>
+    <Compile Remove="Workspace/**/*.cs" />
+  </ItemGroup>
+
   <!-- Shared DooDesch.UI in-game design-system layer (tokens, buttons, sliders, toasts) - linked source.
        Local: Workspace is a sibling (../Workspace). CI checks it out as a subfolder (./Workspace). Import whichever exists. -->
   <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/DooDeschUI.props')" />
   <Import Project="$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/DooDeschUI.props')" />
 
-  <!-- CI checks the build-libs Workspace out INSIDE the repo folder; keep its sources (Unity tooling, ui
-       duplicates) out of the default compile glob. Linked sources are re-added AFTER this removal via props. -->
-  <ItemGroup>
-    <Compile Remove="Workspace/**/*.cs" />
-  </ItemGroup>
-
-  <!-- Shared avatar bone-distortion helper (namespace DooDesch.AvatarKit), linked source. Imported AFTER the
-       Workspace glob-removal above so the linked file survives it (in CI the Workspace/avatar/... subfolder path
-       would otherwise be stripped). Dual-path: local sibling or CI subfolder. -->
+  <!-- Shared avatar bone-distortion helper (namespace DooDesch.AvatarKit), linked source.
+       Dual-path: local sibling or CI subfolder. -->
   <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/AvatarDistortion.props')" />
   <Import Project="$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/AvatarDistortion.props')" />
 
@@ -35,9 +37,9 @@
     <RootNamespace>Personify</RootNamespace>
     <AssemblyName>Personify</AssemblyName>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <NoWarn>$(NoWarn);MSB3277;MSB3245;CS0436</NoWarn>
 
     <WorkspaceLibPath Condition="'$(WorkspaceLibPath)' == ''">$(MSBuildThisFileDirectory)../Workspace/lib</WorkspaceLibPath>

@@ -2,7 +2,7 @@ using MelonLoader;
 using SideHustle;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(Personify.Core), "Personify", "1.1.1", "DooDesch", "https://github.com/DooDesch-Mods/ScheduleOne-Personify")]
+[assembly: MelonInfo(typeof(Personify.Core), "Personify", "1.1.2", "DooDesch", "https://github.com/DooDesch-Mods/ScheduleOne-Personify")]
 [assembly: MelonGame("TVGS", "Schedule I")]
 [assembly: MelonOptionalDependencies("SideHustle")]
 

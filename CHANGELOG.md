@@ -3,6 +3,14 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-07-11
+
+### Changed
+
+- Hardened the release build to cut down on antivirus false positives. The published DLL no longer
+  carries debug symbols or a local build path, and it now ships proper assembly identity (author,
+  product, copyright). Packaging only - no gameplay changes.
+
 ## [1.1.1] - 2026-07-10
 
 ### Fixed

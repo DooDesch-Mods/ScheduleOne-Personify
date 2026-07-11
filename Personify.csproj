@@ -37,10 +37,20 @@
     <RootNamespace>Personify</RootNamespace>
     <AssemblyName>Personify</AssemblyName>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <Version>1.1.1</Version>
-    <AssemblyVersion>1.1.1.0</AssemblyVersion>
-    <FileVersion>1.1.1.0</FileVersion>
+    <Version>1.1.2</Version>
+    <AssemblyVersion>1.1.2.0</AssemblyVersion>
+    <FileVersion>1.1.2.0</FileVersion>
     <NoWarn>$(NoWarn);MSB3277;MSB3245;CS0436</NoWarn>
+
+    <!-- Assembly trust metadata: a populated Company/Product/Copyright makes the unsigned DLL read as a real,
+         attributable build to heuristic AV engines instead of an anonymous binary. No runtime effect. -->
+    <Company>DooDesch</Company>
+    <Authors>DooDesch</Authors>
+    <Product>Personify</Product>
+    <AssemblyTitle>Personify</AssemblyTitle>
+    <Description>In-game NPC editor for Schedule I, launched as a Side Hustle gamemode.</Description>
+    <Copyright>Copyright © DooDesch</Copyright>
+    <Deterministic>true</Deterministic>
 
     <WorkspaceLibPath Condition="'$(WorkspaceLibPath)' == ''">$(MSBuildThisFileDirectory)../Workspace/lib</WorkspaceLibPath>
     <ModsDirectory Condition="'$(ModsDirectory)' == ''">D:\Launcher\SteamLibrary\steamapps\common\Schedule I\Mods</ModsDirectory>
@@ -54,6 +64,14 @@
     <GameManagedPath>$(WorkspaceLibPath)/$(Backend)/game</GameManagedPath>
     <MelonLoaderPath>$(WorkspaceLibPath)/$(Backend)/melonloader</MelonLoaderPath>
     <SideHustlePath>$(WorkspaceLibPath)/$(Backend)/sidehustle/SideHustle.dll</SideHustlePath>
+  </PropertyGroup>
+
+  <!-- Release ships no debug info: strips the PE debug directory and the embedded absolute PDB path
+       (e.g. the CI /home/runner/... or a local F:\... path) from the public DLL. Cleaner binary, no leaked
+       build path, one less "unfinished build" heuristic signal. Debug builds keep full symbols. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Release'">

@@ -1,6 +1,6 @@
 # Personify - In-Game NPC Editor for Schedule I
 
-> 🛟 **Need help or found a bug?** Get support at [support.doodesch.de](https://support.doodesch.de).
+> 🛟 **Need help or found a bug?** Get support at [support.doodesch.de/personify](https://support.doodesch.de/personify).
 
 > Design custom NPCs live in-game - body, face, hair, clothing, tattoos - preview them on the menu
 > character, and export a ready-to-publish
@@ -18,7 +18,7 @@
 Personify 1.0.0 is an early release. The main flows - designing, live preview and export - are verified
 in-game, but the sheer breadth of combinations (every layer, pack size and setup) has not yet seen
 extended real-world testing. Expect it to mature over the coming releases; if something misbehaves, a
-report at [support.doodesch.de](https://support.doodesch.de) directly shapes the next version.
+report at [support.doodesch.de/personify](https://support.doodesch.de/personify) directly shapes the next version.
 
 ## Documentation
 

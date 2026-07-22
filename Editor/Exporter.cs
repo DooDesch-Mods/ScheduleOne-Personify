@@ -103,7 +103,13 @@ namespace Personify.Editor
 
         private static PkManifest BuildPackManifest(NpcProject project, string packDir)
         {
-            var m = new PkManifest { name = project.Name, author = project.Author };
+            var m = new PkManifest
+            {
+                name = project.Name,
+                author = project.Author,
+                packId = string.IsNullOrWhiteSpace(project.PackId) ? null : project.PackId,
+                autoRegister = project.AutoRegister
+            };
             var usedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (NpcDraft npc in project.Npcs)
@@ -125,7 +131,20 @@ namespace Personify.Editor
                     distortion = a.Distortion.Count == 0 ? null : ExportDistortion(a.Distortion)
                 };
 
-                var entry = new PkNpc { id = Ids.Make(project.Name, npc.Name), name = npc.Name, appearance = pa };
+                var entry = new PkNpc
+                {
+                    id = Ids.Make(project.Name, npc.Name),
+                    name = npc.Name,
+                    appearance = pa,
+                    saveId = string.IsNullOrWhiteSpace(npc.SaveId) ? null : npc.SaveId,
+                    spawn = npc.Spawn,
+                    contact = npc.Contact,
+                    relationships = npc.Relationships,
+                    customer = npc.Customer,
+                    dealer = npc.Dealer,
+                    inventory = npc.Inventory,
+                    schedule = npc.Schedule
+                };
 
                 if (npc.Behavior != null && npc.Behavior.Enabled)
                     entry.behavior = new PkBehav
@@ -324,8 +343,26 @@ Thunderstore requires a 256x256 `icon.png` in this folder before upload - add on
 
         // ---- private pack POCOs (mirror Personnel.Content.NpcPackManifest) --------------------------------------
 
-        private sealed class PkManifest { public string name; public string author; public List<PkNpc> npcs = new List<PkNpc>(); }
-        private sealed class PkNpc { public string id; public string name; public PkAppear appearance; public PkBehav behavior; public Dictionary<string, object> extensions; }
+        private sealed class PkManifest
+        {
+            public string name;
+            public string author;
+            public int schemaVersion = 2;
+            public string packId;
+            public bool? autoRegister;
+            public List<PkNpc> npcs = new List<PkNpc>();
+        }
+        private sealed class PkNpc
+        {
+            public string id;
+            public string name;
+            public string saveId;
+            public PkAppear appearance;
+            public PkBehav behavior;
+            // Personnel 2.0 world-data blocks, carried opaquely from the project (no editor UI).
+            public Newtonsoft.Json.Linq.JToken spawn, contact, relationships, customer, dealer, inventory, schedule;
+            public Dictionary<string, object> extensions;
+        }
         private sealed class PkEye { public float top; public float bottom; }
         private sealed class PkLayer { public string path; public string file; public string kind; public string tint; public string color; }
         private sealed class PkBehav { public float aggression; public float maxHealth; public float scale; public string conversation; }

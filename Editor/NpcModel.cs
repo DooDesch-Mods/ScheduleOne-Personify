@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Personify.Editor
 {
@@ -92,6 +93,17 @@ namespace Personify.Editor
         [JsonProperty("appearance")] public AppearanceDraft Appearance { get; set; } = new AppearanceDraft();
         [JsonProperty("behavior")] public BehaviorDraft Behavior { get; set; } = new BehaviorDraft();
         [JsonProperty("backrooms")] public BackroomsDraft Backrooms { get; set; } = new BackroomsDraft();
+
+        // Personnel 2.0 world-data blocks. The editor has no UI for these (authored by hand or by a
+        // generator); they are carried opaquely through load/save/export so nothing gets lost.
+        [JsonProperty("saveId", NullValueHandling = NullValueHandling.Ignore)] public string SaveId { get; set; }
+        [JsonProperty("spawn", NullValueHandling = NullValueHandling.Ignore)] public JToken Spawn { get; set; }
+        [JsonProperty("contact", NullValueHandling = NullValueHandling.Ignore)] public JToken Contact { get; set; }
+        [JsonProperty("relationships", NullValueHandling = NullValueHandling.Ignore)] public JToken Relationships { get; set; }
+        [JsonProperty("customer", NullValueHandling = NullValueHandling.Ignore)] public JToken Customer { get; set; }
+        [JsonProperty("dealer", NullValueHandling = NullValueHandling.Ignore)] public JToken Dealer { get; set; }
+        [JsonProperty("inventory", NullValueHandling = NullValueHandling.Ignore)] public JToken Inventory { get; set; }
+        [JsonProperty("schedule", NullValueHandling = NullValueHandling.Ignore)] public JToken Schedule { get; set; }
     }
 
     /// <summary>
@@ -108,6 +120,12 @@ namespace Personify.Editor
         [JsonProperty("websiteUrl")] public string WebsiteUrl { get; set; } = "";
         [JsonProperty("license")] public string License { get; set; } = "All rights reserved";
         [JsonProperty("iconSource")] public string IconSource { get; set; } = "";
+
+        // Personnel 2.0 pack-level fields, carried opaquely (no editor UI): stable pack identity for id
+        // derivation, and the auto-register default for all NPCs in the pack.
+        [JsonProperty("packId", NullValueHandling = NullValueHandling.Ignore)] public string PackId { get; set; }
+        [JsonProperty("autoRegister", NullValueHandling = NullValueHandling.Ignore)] public bool? AutoRegister { get; set; }
+
         [JsonProperty("npcs")] public List<NpcDraft> Npcs { get; set; } = new List<NpcDraft>();
 
         [JsonIgnore] public string FolderName { get; set; }

@@ -27,6 +27,11 @@ namespace Personify.Editor
 
         public static string PacksRoot => Path.Combine(MelonEnvironment.UserDataDirectory, "Inkorporated", "Packs");
 
+        /// <summary>Drops the cached pack list so the next <see cref="All"/> re-scans the manifests on disk.
+        /// Called when the editor opens and when a layer picker builds its options, so packs installed
+        /// mid-session show up.</summary>
+        public static void Refresh() => _cache = null;
+
         public static List<InkTattoo> All()
         {
             if (_cache != null) return _cache;

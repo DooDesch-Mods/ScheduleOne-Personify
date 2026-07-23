@@ -3,6 +3,20 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-07-23
+
+### Added
+
+- Inkorporated tattoo packs now show up directly in the Advanced tab's face and body layer pickers,
+  grouped by pack - face-placement tattoos in the face picker, everything else in the body picker.
+  Picking one copies the PNG into your NPC pack, so exports stay self-contained (same behaviour as the
+  Character tab's tattoo button, which previously was the only place they appeared).
+
+### Fixed
+
+- Tattoo packs installed while the game is running are picked up the next time the editor or a layer
+  picker opens - the pack list is no longer read only once per session.
+
 ## [1.1.2] - 2026-07-11
 
 ### Changed

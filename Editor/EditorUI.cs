@@ -17,7 +17,7 @@ namespace Personify.Editor
     /// live as you edit. Flow: choose / create a project -> add NPCs -> tune appearance (and optional behaviour /
     /// Backrooms binding) -> see it live on the character -> export a ready-to-release Personnel NPC pack.
     /// </summary>
-    public static class EditorUI
+    public static partial class EditorUI
     {
         private static LaunchContext _ctx;
         private static GameObject _canvasGO;
@@ -43,6 +43,7 @@ namespace Personify.Editor
         public static void Open(LaunchContext ctx)
         {
             _ctx = ctx;
+            InkorporatedCatalog.Refresh();   // packs installed since the last visit should show up
             if (_canvasGO == null) BuildCanvas();
             Preview.EnsureAvatar();
             ShowProjectSelect();
@@ -417,8 +418,8 @@ namespace Personify.Editor
             SliderRow("Height", 0f, 1f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
             SliderRow("Angle", 0f, 1f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
 
-            LayerSection("Face layers", a.FaceLayers, PathCatalog.FaceLayers(), "face layer");
-            LayerSection("Body layers", a.BodyLayers, PathCatalog.BodyLayers(), "body layer");
+            LayerSection("Face layers", a.FaceLayers, PathCatalog.FaceLayers(), "face layer", inkPlacementFace: true);
+            LayerSection("Body layers", a.BodyLayers, PathCatalog.BodyLayers(), "body layer", inkPlacementFace: false);
             LayerSection("Accessories", a.Accessories, PathCatalog.Accessories(), "accessory", allowCustomImport: false);
 
             Components.SectionHeader(_formContent, "Behaviour (S1API, optional)");
@@ -965,7 +966,7 @@ namespace Personify.Editor
         // all three sections: each existing entry is a row (tint swatch + display name + remove), "+ Add ..." opens
         // the OptionPicker over the real catalog for that category, and (Face/Body only) a secondary "Import custom
         // PNG..." keeps the original free-form import flow available.
-        private static void LayerSection(string title, List<LayerDraft> list, List<PathOption> catalog, string kindLabel, bool allowCustomImport = true)
+        private static void LayerSection(string title, List<LayerDraft> list, List<PathOption> catalog, string kindLabel, bool allowCustomImport = true, bool? inkPlacementFace = null)
         {
             Components.SectionHeader(_formContent, title + " (" + (list?.Count ?? 0) + ")");
             if (list != null)
@@ -975,10 +976,21 @@ namespace Personify.Editor
             var (addGO, addBtn, _) = UIFactory.ButtonWithLabel("addlyr", "+ Add " + kindLabel, _formContent, Theme.Accent, 0, 32);
             addGO.AddComponent<LayoutElement>().minHeight = 32;
             addBtn.onClick.AddListener((UnityAction)(() =>
-                OptionPicker.Show(_canvasGO.transform, "Choose " + kindLabel, catalog, null, allowNone: false, chosen =>
+                OptionPicker.Show(_canvasGO.transform, "Choose " + kindLabel, WithInkOptions(catalog, inkPlacementFace), null, allowNone: false, chosen =>
                 {
                     if (string.IsNullOrEmpty(chosen) || list == null) return;
-                    list.Add(new LayerDraft { Path = chosen, Tint = "#FFFFFF" });
+                    // Inkorporated entries carry their PNG path; picking one imports the PNG into the NPC pack as a
+                    // custom layer (same self-contained flow as the Character tab's Inkorporated button).
+                    InkTattoo ink = InkorporatedCatalog.ByPng(chosen);
+                    if (ink != null)
+                    {
+                        if (_project == null) return;
+                        string rel = ProjectStore.ImportSource(_project, ink.PngPath);
+                        if (rel == null) { Toast.Show("Import failed.", Severity.Danger); return; }
+                        list.Add(new LayerDraft { Source = rel, Tint = "#FFFFFF" });
+                    }
+                    else
+                        list.Add(new LayerDraft { Path = chosen, Tint = "#FFFFFF" });
                     RefreshForm(); MarkDirty();
                 })));
 
@@ -989,6 +1001,22 @@ namespace Personify.Editor
                 impGO.AddComponent<LayoutElement>().minHeight = 28;
                 impBtn.onClick.AddListener((UnityAction)(() => ImportLayerFlow(list, kindLabel)));
             }
+        }
+
+        // Vanilla catalog plus one picker section per installed Inkorporated pack - face-placement tattoos in the
+        // face picker, everything else in the body picker. Built at picker-open time (not form-build time) so a
+        // fresh manifest scan picks up packs installed mid-session. Never mutates the cached catalog list.
+        private static List<PathOption> WithInkOptions(List<PathOption> catalog, bool? placementFace)
+        {
+            if (placementFace == null || !InkorporatedInstalled()) return catalog;
+            InkorporatedCatalog.Refresh();
+            List<InkTattoo> ink = InkorporatedCatalog.All();
+            if (ink.Count == 0) return catalog;
+            var merged = new List<PathOption>(catalog);
+            foreach (InkTattoo t in ink)
+                if (t.IsFace == placementFace.Value)
+                    merged.Add(new PathOption(t.Pack, t.Name, t.PngPath));
+            return merged;
         }
 
         // One existing layer/accessory entry: a visibility eye (leftmost), a clickable tint swatch (opens ColorPicker),

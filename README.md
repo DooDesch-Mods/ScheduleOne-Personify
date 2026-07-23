@@ -7,7 +7,7 @@
 > [Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel) NPC pack. Runs as a
 > [Side Hustle](https://github.com/DooDesch-Mods/ScheduleOne-SideHustle) gamemode, right from the main menu.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
@@ -15,7 +15,7 @@
 
 ## Project status
 
-Personify 1.0.0 is an early release. The main flows - designing, live preview and export - are verified
+Personify is still a young mod. The main flows - designing, live preview and export - are verified
 in-game, but the sheer breadth of combinations (every layer, pack size and setup) has not yet seen
 extended real-world testing. Expect it to mature over the coming releases; if something misbehaves, a
 report at [support.doodesch.de/personify](https://support.doodesch.de/personify) directly shapes the next version.

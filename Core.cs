@@ -2,7 +2,7 @@ using MelonLoader;
 using SideHustle;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(Personify.Core), "Personify", "1.1.2", "DooDesch", "https://github.com/DooDesch-Mods/ScheduleOne-Personify")]
+[assembly: MelonInfo(typeof(Personify.Core), "Personify", "1.2.0", "DooDesch", "https://github.com/DooDesch-Mods/ScheduleOne-Personify")]
 [assembly: MelonGame("TVGS", "Schedule I")]
 [assembly: MelonOptionalDependencies("SideHustle")]
 
@@ -59,6 +59,9 @@ namespace Personify
 
         public override void OnUpdate()
         {
+#if DEBUG
+            Editor.EditorUI.SelfTestTick();
+#endif
             if (Editor.EditorUI.IsOpen) Editor.EditorUI.Tick();
         }
 

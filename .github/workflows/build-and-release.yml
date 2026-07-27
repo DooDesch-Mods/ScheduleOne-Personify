@@ -82,7 +82,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           # Nexus file descriptions use BBCode, not Markdown. Convert "### Heading" to [b]Heading[/b],
           # "- item" bullets to [list]/[*], drop inline-code backticks, and join wrapped bullet lines.
-          BBCODE=$(printf '%s\n' "$SECTION" | awk '
+          BBCODE=$(printf '%s\n' "$SECTION" | sed -E 's/\*\*([^*]+)\*\*/[b]\1[\/b]/g' | awk '
             function flush(){ if(buf!=""){ printf "[*]%s\n", buf; buf="" } }
             BEGIN{ inlist=0; buf="" }
             {

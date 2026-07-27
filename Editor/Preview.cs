@@ -56,7 +56,7 @@ namespace Personify.Editor
                 if (!EnsureAvatar() || npc == null) return false;
                 AvatarSettings s = BuildSettings(project, npc.Appearance);
                 if (s == null) return false;
-                _avatar.LoadAvatarSettings(s);
+                AvatarLayerSlots.LoadAndClean(_avatar, s);
                 AvatarDistortion.Apply(_avatar, ToDistortionEntries(npc.Appearance.Distortion));
                 return true;
             }
@@ -81,7 +81,7 @@ namespace Personify.Editor
                 RestoreRig();
                 if (_avatar != null && _menuBaseline != null)
                 {
-                    _avatar.LoadAvatarSettings(BuildSettings(null, _menuBaseline));
+                    AvatarLayerSlots.LoadAndClean(_avatar, BuildSettings(null, _menuBaseline));
                     AvatarDistortion.Apply(_avatar, ToDistortionEntries(_menuBaseline.Distortion));   // reset any bone scale left over from editing
                 }
             }
@@ -154,10 +154,28 @@ namespace Personify.Editor
                 accList.Add(acc);
             }
 
+            // The character renders only eight body layers at once; anything past that is written to a material
+            // slot that does not exist and vanishes without a trace. Drop the surplus deliberately and say so.
+            var dropped = AvatarLayerSlots.TrimToBudget(bodyList, BudgetPriority);
+            foreach (string p in dropped)
+                Core.Log?.Warning("[preview] body layer budget exceeded, dropped " + p +
+                                  " (only " + AvatarLayerSlots.BodySlots + " render at once)");
+
             s.FaceLayerSettings = faceList;
             s.BodyLayerSettings = bodyList;
             s.AccessorySettings = accList;
             return s;
+        }
+
+        // Which body layer gives up its slot first. Custom art is why someone opened the editor, so it outranks
+        // stock tattoos, and both outrank clothing - a shirt is the most obvious thing to notice missing, but it
+        // is also the easiest to put back by toggling a layer off.
+        private static int BudgetPriority(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return 0;
+            if (path.IndexOf("personify", StringComparison.OrdinalIgnoreCase) >= 0) return 3;
+            if (path.IndexOf("/Tattoos/", StringComparison.OrdinalIgnoreCase) >= 0) return 2;
+            return 1;
         }
 
         private static void AddLayers(NpcProject project, List<LayerDraft> layers,
@@ -179,14 +197,17 @@ namespace Personify.Editor
         }
 
         private static string SourceLayer(bool face) =>
-            face ? "Avatar/Layers/Tattoos/face/Face_Teardrop" : "Avatar/Layers/Tattoos/chest/Chest_Bird";
+            face ? "Avatar/Layers/Tattoos/Face/Face_Teardrop" : "Avatar/Layers/Tattoos/Chest/Chest_Bird";
 
         /// <summary>Register a PNG as a custom avatar layer and return its Resources path (or null).</summary>
         public static string RegisterCustomLayer(string absPngPath, bool face)
         {
             if (string.IsNullOrEmpty(absPngPath) || !File.Exists(absPngPath)) return null;
             string seg = face ? "Face" : "body";
-            string target = "Avatar/Layers/Tattoos/personify/" + seg + "/" + Sanitize(Path.GetFileNameWithoutExtension(absPngPath));
+            // The registry is global and has no unregister, so the path has to identify the FILE, not just its
+            // name - two NPCs each importing their own "grin.png" would otherwise share whichever loaded first.
+            string target = "Avatar/Layers/Tattoos/personify/" + seg + "/" +
+                            Sanitize(Path.GetFileNameWithoutExtension(absPngPath)) + "_" + SourceKey(absPngPath);
             if (_customLayers.TryGetValue(target, out string done)) return done;
             try
             {
@@ -199,6 +220,15 @@ namespace Personify.Editor
                 return target;
             }
             catch (Exception e) { Core.Log?.Warning("[preview] custom layer: " + e.Message); return null; }
+        }
+
+        // Short stable tag for a source file's full path, so same-named PNGs from different projects stay apart.
+        private static string SourceKey(string absPath)
+        {
+            uint h = 2166136261;
+            string p = absPath.Replace('\\', '/').ToLowerInvariant();
+            foreach (char c in p) { h ^= c; h *= 16777619; }
+            return h.ToString("x8");
         }
 
         // ---- baseline capture ----------------------------------------------------------------------------------

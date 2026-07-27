@@ -3,6 +3,20 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-07-27
+
+### Fixed
+
+- Clothing no longer sticks between characters. Building several NPCs in a row could leave a garment from
+  an earlier one on the new character: the game clears only six of its eight avatar layer slots, so an NPC
+  with more layers than that strands its clothing where the next NPC inherits it.
+- Layers no longer look darker than they should. The same leak could composite one layer several times
+  over, which read as a tint that nothing in the editor removed.
+- A layer no longer vanishes without explanation. Past eight body layers the game silently drops one;
+  the surplus is now dropped deliberately and named in the log.
+- Two NPCs that each import a PNG with the same filename no longer share one texture. Custom layer paths
+  were derived from the filename alone, so the second NPC rendered the first one's image.
+
 ## [1.2.0] - 2026-07-23
 
 ### Added

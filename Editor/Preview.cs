@@ -156,9 +156,8 @@ namespace Personify.Editor
 
             // The character renders only eight body layers at once; anything past that is written to a material
             // slot that does not exist and vanishes without a trace. Drop the surplus deliberately and say so.
-            var dropped = AvatarLayerSlots.TrimToBudget(bodyList, BudgetPriority);
-            foreach (string p in dropped)
-                Core.Log?.Warning("[preview] body layer budget exceeded, dropped " + p +
+            foreach (var d in AvatarLayerSlots.TrimToBudget(bodyList, BudgetPriority))
+                Core.Log?.Warning("[preview] body layer budget exceeded, dropped " + d.layerPath +
                                   " (only " + AvatarLayerSlots.BodySlots + " render at once)");
 
             s.FaceLayerSettings = faceList;
@@ -168,8 +167,8 @@ namespace Personify.Editor
         }
 
         // Which body layer gives up its slot first. Custom art is why someone opened the editor, so it outranks
-        // stock tattoos, and both outrank clothing - a shirt is the most obvious thing to notice missing, but it
-        // is also the easiest to put back by toggling a layer off.
+        // stock tattoos, and both outrank clothing: a missing garment is obvious enough that the user can see what
+        // happened and turn a layer off, while a missing tattoo just looks like the editor lost it.
         private static int BudgetPriority(string path)
         {
             if (string.IsNullOrEmpty(path)) return 0;

@@ -232,7 +232,7 @@ jobs:
           path: thunderstore-package
           deps: |
             LavaGang-MelonLoader-0.7.3
-            ifBars-S1API_Forked-3.0.5
+            ifBars-S1API_Forked-3.1.1
             DooDesch-SideHustle-1.0.0
           categories: |
             Mods

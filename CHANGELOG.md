@@ -3,6 +3,13 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.2.2] - 2026-08-01
+
+### Changed
+
+- Runs on Schedule I 0.4.6f11.
+- Needs S1API 3.1.1, up from 3.0.5. Update it along with the mod.
+
 ## [1.2.1] - 2026-07-27
 
 ### Fixed

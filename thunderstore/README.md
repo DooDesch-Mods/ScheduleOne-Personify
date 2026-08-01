@@ -6,7 +6,7 @@
 > character, and export a ready-to-publish **Personnel** NPC pack. Runs as a **Side Hustle** gamemode,
 > right from the main menu.
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.2-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)

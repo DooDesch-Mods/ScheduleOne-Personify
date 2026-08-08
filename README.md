@@ -78,7 +78,7 @@ Side Hustle) are pulled in automatically.
 Custom PNG layers: drop PNGs into `UserData/Personify/Import/`, then use "+ Add custom layer" in
 Advanced mode. A layer PNG is a full UV-space texture (like Inkorporated tattoos) - opaque pixels
 land where the UV region of that body part sits; the
-[authoring guide](https://docs.doodesch.de/mods/personnel/)
+[authoring guide](https://docs.doodesch.de/mods/personnel/guides/custom-png-layers/)
 covers alignment and sizes.
 
 Tips:

@@ -28,6 +28,10 @@
   <!-- Shared avatar layer-slot helper: vanilla clears only 6 of the body material's 8 layer slots - linked source. -->
   <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/AvatarLayers.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/AvatarLayers.props')" />
   <Import Project="$(MSBuildThisFileDirectory)Workspace/build/AvatarLayers.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/AvatarLayers.props')" />
+  <!-- Where a build is allowed to install: the test copy by default, and never a real game installation
+       without saying so out loud. See Workspace/build/Deploy.props. -->
+  <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/Deploy.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/Deploy.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Workspace/build/Deploy.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/Deploy.props')" />
 
   <!--
     Personify - MelonLoader IL2CPP in-game NPC editor for Schedule I (editor half of the Personnel/Personify pair,
@@ -63,7 +67,6 @@
     <Deterministic>true</Deterministic>
 
     <WorkspaceLibPath Condition="'$(WorkspaceLibPath)' == ''">$(MSBuildThisFileDirectory)../Workspace/lib</WorkspaceLibPath>
-    <ModsDirectory Condition="'$(ModsDirectory)' == ''">D:\Launcher\SteamLibrary\steamapps\common\Schedule I\Mods</ModsDirectory>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0'">

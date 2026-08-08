@@ -22,7 +22,7 @@ report at [support.doodesch.de/personify](https://support.doodesch.de/personify)
 
 ## Documentation
 
-- 📖 **[Personnel wiki](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/wiki)** - the framework
+- 📖 **[Personnel wiki](https://docs.doodesch.de/mods/personnel/)** - the framework
   the exported packs run on: pack format and id rules, the consumer API, custom PNG layer authoring
   (UV alignment), multiplayer, troubleshooting.
 - This README is the full guide to the editor itself.
@@ -78,7 +78,7 @@ Side Hustle) are pulled in automatically.
 Custom PNG layers: drop PNGs into `UserData/Personify/Import/`, then use "+ Add custom layer" in
 Advanced mode. A layer PNG is a full UV-space texture (like Inkorporated tattoos) - opaque pixels
 land where the UV region of that body part sits; the
-[authoring guide](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/wiki/Custom-PNG-Layers)
+[authoring guide](https://docs.doodesch.de/mods/personnel/)
 covers alignment and sizes.
 
 Tips:

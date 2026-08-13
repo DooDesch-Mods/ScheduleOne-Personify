@@ -61,6 +61,20 @@ namespace Personify.Editor
             return seg.Replace('_', ' ');
         }
 
+        /// <summary>
+        /// The tint a freshly picked layer starts with. Everything under <c>Avatar/Layers/Face/</c> is a black mask
+        /// in vanilla - mouths, facial hair, freckles, wrinkles, eye shadow - so white leaves a pale smear where a
+        /// drawn line belongs. Every shipped NPC asset tints those layers black; clothing, tattoos and custom art
+        /// carry their own colour and stay white.
+        /// </summary>
+        public static string DefaultTint(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "#FFFFFF";
+            bool mask = path.StartsWith("Avatar/Layers/Face/", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(path, "Avatar/Layers/Top/ChestHair1", StringComparison.OrdinalIgnoreCase);
+            return mask ? "#000000" : "#FFFFFF";
+        }
+
         /// <summary>The subset of a catalog list belonging to one group/category (e.g. "Shirts", "Feet", "Eyes") -
         /// used by the Basic view's single-select slots.</summary>
         public static List<PathOption> InGroup(List<PathOption> all, string group) =>

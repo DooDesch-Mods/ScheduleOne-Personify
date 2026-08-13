@@ -88,6 +88,28 @@ namespace Personify.Editor
             catch (Exception e) { Core.Log?.Warning("[preview] exit: " + e.Message); }
         }
 
+        /// <summary>What the rig Personify is driving actually carries right now, for checking that an apply landed
+        /// on the character the player can see rather than on some other avatar in the scene.</summary>
+        public static string LiveSummary()
+        {
+            try
+            {
+                int rigCount = 0;
+                var rigs = UnityEngine.Object.FindObjectsOfType<S1MenuRig>(true);
+                if (rigs != null) rigCount = rigs.Length;
+                if (!EnsureAvatar()) return "rigs=" + rigCount + " no avatar";
+                var cur = _avatar.CurrentSettings;
+                string id = _avatar.gameObject != null
+                    ? _avatar.gameObject.name + "#" + _avatar.gameObject.GetInstanceID() +
+                      (_avatar.gameObject.activeInHierarchy ? " active" : " INACTIVE")
+                    : "(no gameObject)";
+                if (cur == null) return "rigs=" + rigCount + " " + id + " settings=null";
+                return $"rigs={rigCount} {id} gender={cur.Gender:0.00} height={cur.Height:0.00} " +
+                       $"weight={cur.Weight:0.00} skin={HexOf(cur.SkinColor)} face={cur.FaceLayerSettings?.Count ?? -1}";
+            }
+            catch (Exception e) { return "live summary threw: " + e.Message; }
+        }
+
         /// <summary>How many body meshes the live avatar has - drives how many "Body mesh N" hide rows the
         /// Experimental tab shows.</summary>
         public static int CurrentBodyMeshCount() => EnsureAvatar() && _avatar?.BodyMeshes != null ? _avatar.BodyMeshes.Length : 0;
@@ -153,6 +175,14 @@ namespace Personify.Editor
                 acc.color = Hex(l.Tint, Color.white);
                 accList.Add(acc);
             }
+
+            // The face list is read by POSITION, not as a flat stack: entry 0 is the mouth and entry 1 is the facial
+            // hair, which the game draws in the avatar's hair colour. Sorting them into those roles is what keeps a
+            // freckle or eyeshadow layer from being drawn as hair.
+            AvatarLayerSlots.OrderFaceLayers(faceList);
+            foreach (var d in AvatarLayerSlots.TrimFaceToBudget(faceList, BudgetPriority))
+                Core.Log?.Warning("[preview] face layer budget exceeded, dropped " + d.layerPath +
+                                  " (only " + AvatarLayerSlots.FreeFaceEntries + " render besides the mouth and facial hair)");
 
             // The character renders only eight body layers at once; anything past that is written to a material
             // slot that does not exist and vanishes without a trace. Drop the surplus deliberately and say so.
@@ -386,10 +416,17 @@ namespace Personify.Editor
             catch { return fallback; }
         }
 
+        /// <summary>
+        /// "#RRGGBB", or "#RRGGBBAA" when the colour is not fully opaque. Layer tints carry their strength in the
+        /// alpha channel - vanilla's freckles and eye shadow are black at a fraction of an alpha - so dropping it
+        /// would quietly turn every captured or edited detail layer up to full.
+        /// </summary>
         public static string HexOf(Color c)
         {
             Color32 c32 = c;
-            return $"#{c32.r:X2}{c32.g:X2}{c32.b:X2}";
+            return c32.a == 255
+                ? $"#{c32.r:X2}{c32.g:X2}{c32.b:X2}"
+                : $"#{c32.r:X2}{c32.g:X2}{c32.b:X2}{c32.a:X2}";
         }
 
         private static string Sanitize(string s)

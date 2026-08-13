@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DooDesch.AvatarKit;
 using DooDesch.UI;
 using Personify.Editor.Widgets;
 using S1API.UI;
@@ -62,11 +63,14 @@ namespace Personify.Editor
         public static void Tick()
         {
             try { Toast.Tick(); } catch { }
-            if (_previewDirty && Time.time - _lastEdit > 0.12f)
-            {
-                _previewDirty = false;
-                if (_project != null && _selected != null) Preview.Apply(_project, _selected);
-            }
+            if (!_previewDirty || Time.time - _lastEdit <= 0.12f) return;
+            if (_project == null || _selected == null) { _previewDirty = false; return; }
+
+            // Stay dirty until an apply actually lands. The rig is not always there the moment an edit happens -
+            // the menu character is built by the scene, not by us - and clearing the flag on a failed attempt left
+            // the character showing the previous NPC with nothing scheduled to correct it.
+            if (Preview.Apply(_project, _selected)) _previewDirty = false;
+            else _lastEdit = Time.time;   // back off a frame's worth rather than retrying every Update
         }
 
         // Runs in LateUpdate (after Animator evaluation) so bone distortion keeps winning against whatever vanilla
@@ -386,7 +390,14 @@ namespace Personify.Editor
             StretchFill(seg.GetComponent<RectTransform>());
         }
 
-        // The full editor: every layer + knob.
+        // The full editor: every knob the avatar has, at the range it actually accepts.
+        //
+        // The Character tab mirrors the vanilla creator and is deliberately narrow - a binary gender switch, no
+        // eyelid colour, eyebrows on the 0..1 rails the creator shows. That view cannot express the game's own
+        // cast: Alison's gender is 0.878, and shipped NPCs run their eyebrow angle from -3.75 to 10.93 and their
+        // thickness up to 3. Every range below covers what vanilla uses and then some, so an NPC built here can
+        // sit next to a stock one - or go past it. Physically impossible values live one tab further, in
+        // Experimental.
         private static void BuildAdvancedForm(NpcDraft n)
         {
             AppearanceDraft a = n.Appearance;
@@ -397,26 +408,36 @@ namespace Personify.Editor
             RemoveRow();
 
             Components.SectionHeader(_formContent, "Body");
-            GenderRow(a);
-            SliderRow("Height", 0.7f, 1.3f, a.Height, v => a.Height = v);
+            SliderRow("Gender", 0f, 1f, a.Gender, v => a.Gender = v);
+            Caption("0 = male, 1 = female - stock NPCs use every value between. Swapping the underwear layer to match is the Character tab's job.");
+            SliderRow("Height", 0.5f, 1.5f, a.Height, v => a.Height = v);
             SliderRow("Weight", 0f, 1f, a.Weight, v => a.Weight = v);
-            ColorRow("Skin colour", a.SkinColor, v => a.SkinColor = v);
+            ColorRow("Skin colour", a.SkinColor, v => VanillaDerived.SetSkinColor(a, v));
 
             Components.SectionHeader(_formContent, "Hair");
             ColorRow("Hair colour", a.HairColor, v => a.HairColor = v);
             PickerRow("Hair style", a.HairPath, "Choose a hair style", PathCatalog.HairStyles(), allowNone: true, v => a.HairPath = v);
+            Caption("The facial hair layer is drawn in this colour - the game never reads that layer's own tint.");
 
+            // AvatarSettings.EyeballMaterialIdentifier is deliberately absent: nothing in the game ever reads it
+            // back (only BasicAvatarSettings and CustomizationManager write "Default" into it, and no code maps a
+            // string to an eyeball material), so a control for it would be a knob that moves nothing.
             Components.SectionHeader(_formContent, "Eyes");
             ColorRow("Eyeball tint", a.EyeBallTint, v => a.EyeBallTint = v);
             SliderRow("Pupil", 0f, 1f, a.PupilDilation, v => a.PupilDilation = v);
-            SliderRow("L. eyelid", 0f, 1f, a.LeftEyeTop, v => { a.LeftEyeTop = v; a.LeftEyeBottom = v; });
-            SliderRow("R. eyelid", 0f, 1f, a.RightEyeTop, v => { a.RightEyeTop = v; a.RightEyeBottom = v; });
+            // Four sliders, not two: the Character tab sets the upper and lower lid apart, and one slider per eye
+            // would flatten that back to a single value the moment it is touched.
+            SliderRow("L. upper", 0f, 1f, a.LeftEyeTop, v => a.LeftEyeTop = v);
+            SliderRow("L. lower", 0f, 1f, a.LeftEyeBottom, v => a.LeftEyeBottom = v);
+            SliderRow("R. upper", 0f, 1f, a.RightEyeTop, v => a.RightEyeTop = v);
+            SliderRow("R. lower", 0f, 1f, a.RightEyeBottom, v => a.RightEyeBottom = v);
+            EyelidColorRows(a);
 
             Components.SectionHeader(_formContent, "Eyebrows");
-            SliderRow("Scale", 0f, 2f, a.EyebrowScale, v => a.EyebrowScale = v);
-            SliderRow("Thickness", 0f, 2f, a.EyebrowThickness, v => a.EyebrowThickness = v);
-            SliderRow("Height", 0f, 1f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
-            SliderRow("Angle", 0f, 1f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
+            SliderRow("Scale", 0f, 3f, a.EyebrowScale, v => a.EyebrowScale = v);
+            SliderRow("Thickness", 0f, 4f, a.EyebrowThickness, v => a.EyebrowThickness = v);
+            SliderRow("Height", -2f, 2f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
+            SliderRow("Angle", -15f, 15f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
 
             LayerSection("Face layers", a.FaceLayers, PathCatalog.FaceLayers(), "face layer", inkPlacementFace: true);
             LayerSection("Body layers", a.BodyLayers, PathCatalog.BodyLayers(), "body layer", inkPlacementFace: false);
@@ -427,8 +448,8 @@ namespace Personify.Editor
             if (n.Behavior.Enabled)
             {
                 SliderRow("Aggression", 0f, 1f, n.Behavior.Aggression, v => n.Behavior.Aggression = v);
-                SliderRow("Max health", 1f, 500f, n.Behavior.MaxHealth, v => n.Behavior.MaxHealth = v);
-                SliderRow("Scale", 0.5f, 2f, n.Behavior.Scale, v => n.Behavior.Scale = v);
+                SliderRow("Max health", 1f, 1000f, n.Behavior.MaxHealth, v => n.Behavior.MaxHealth = v);
+                SliderRow("Scale", 0.25f, 4f, n.Behavior.Scale, v => n.Behavior.Scale = v);
                 ConversationRow("Conversation", n.Behavior.Conversation, v => n.Behavior.Conversation = v);
             }
 
@@ -460,6 +481,7 @@ namespace Personify.Editor
             var warn = UIFactory.Text("warn", "Unclamped bone scale (0-8x) and part hiding. For Backrooms-style body horror, not a vanilla look.", _formContent, Theme.Caption, TextAnchor.UpperLeft);
             warn.color = Theme.TextMuted; warn.raycastTarget = false; warn.horizontalOverflow = HorizontalWrapMode.Wrap; warn.gameObject.AddComponent<LayoutElement>().minHeight = 34;
 
+            UnclampedRows(a);
             foreach (var (key, label, canHide) in BoneRows) BoneDistortionRows(a, key, label, canHide);
 
             Components.SectionHeader(_formContent, "Hide meshes");
@@ -467,6 +489,30 @@ namespace Personify.Editor
             int bodyMeshCount = Preview.CurrentBodyMeshCount();
             for (int i = 0; i < bodyMeshCount; i++)
                 MeshHideRow(a, DooDesch.AvatarKit.AvatarDistortion.BodyMeshKeyPrefix + i, "Body mesh " + i);
+        }
+
+        // The same fields the Advanced tab carries, on rails nothing sane would need. They are not decoration:
+        // gender and weight go straight into blend-shape weights (Avatar.ApplyShapeKeys multiplies them by 100 and
+        // never clamps), so past 1 the mesh keeps extrapolating instead of stopping, and height is a raw
+        // transform scale. Nothing here is reachable from the Advanced tab, and the Advanced sliders widen
+        // themselves rather than snap a value set here back into range.
+        private static void UnclampedRows(AppearanceDraft a)
+        {
+            Components.SectionHeader(_formContent, "Unclamped body");
+            SliderRow("Gender", -3f, 4f, a.Gender, v => a.Gender = v);
+            SliderRow("Height", 0.05f, 4f, a.Height, v => a.Height = v);
+            SliderRow("Weight", -3f, 4f, a.Weight, v => a.Weight = v);
+
+            Components.SectionHeader(_formContent, "Unclamped face");
+            SliderRow("Pupil", 0f, 5f, a.PupilDilation, v => a.PupilDilation = v);
+            SliderRow("L. upper", -2f, 3f, a.LeftEyeTop, v => a.LeftEyeTop = v);
+            SliderRow("L. lower", -2f, 3f, a.LeftEyeBottom, v => a.LeftEyeBottom = v);
+            SliderRow("R. upper", -2f, 3f, a.RightEyeTop, v => a.RightEyeTop = v);
+            SliderRow("R. lower", -2f, 3f, a.RightEyeBottom, v => a.RightEyeBottom = v);
+            SliderRow("Brow scale", -5f, 10f, a.EyebrowScale, v => a.EyebrowScale = v);
+            SliderRow("Brow thick", -5f, 10f, a.EyebrowThickness, v => a.EyebrowThickness = v);
+            SliderRow("Brow height", -10f, 10f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
+            SliderRow("Brow angle", -180f, 180f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
         }
 
         private static BoneDistortionDraft Dist(AppearanceDraft a, string key)
@@ -508,7 +554,7 @@ namespace Personify.Editor
             Components.SectionHeader(_formContent, "Body");
             GenderRow(a);
             SliderRow("Weight", 0f, 1f, a.Weight, v => a.Weight = v);
-            ColorRow("Skin", a.SkinColor, v => a.SkinColor = v);
+            ColorRow("Skin", a.SkinColor, v => VanillaDerived.SetSkinColor(a, v));
 
             Components.SectionHeader(_formContent, "Hair");
             PickerRow("Style", a.HairPath, "Choose a hair style", PathCatalog.HairStyles(), allowNone: true, v => a.HairPath = v);
@@ -525,11 +571,13 @@ namespace Personify.Editor
             SliderRow("Upper lid", 0f, 1f, a.LeftEyeTop, v => { a.LeftEyeTop = v; a.RightEyeTop = v; });
             SliderRow("Lower lid", 0f, 1f, a.LeftEyeBottom, v => { a.LeftEyeBottom = v; a.RightEyeBottom = v; });
 
+            // Ranges are the span the shipped NPCs actually occupy, so this simple view can still reproduce a
+            // stock face. A brow that only goes up was the old 0..1 rail's doing - most vanilla NPCs rest below 0.
             Components.SectionHeader(_formContent, "Eyebrows");
             SliderRow("Scale", 0f, 2f, a.EyebrowScale, v => a.EyebrowScale = v);
-            SliderRow("Thickness", 0f, 2f, a.EyebrowThickness, v => a.EyebrowThickness = v);
-            SliderRow("Height", 0f, 1f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
-            SliderRow("Angle", 0f, 1f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
+            SliderRow("Thickness", 0f, 3f, a.EyebrowThickness, v => a.EyebrowThickness = v);
+            SliderRow("Height", -1f, 1f, a.EyebrowRestingHeight, v => a.EyebrowRestingHeight = v);
+            SliderRow("Angle", -4f, 11f, a.EyebrowRestingAngle, v => a.EyebrowRestingAngle = v);
 
             Components.SectionHeader(_formContent, "Clothing");
             SlotRow("Top", a.BodyLayers, PathCatalog.Tops());
@@ -568,7 +616,7 @@ namespace Personify.Editor
                 {
                     if (string.IsNullOrEmpty(chosen)) return;
                     var list = chosen.IndexOf("/Face/", StringComparison.OrdinalIgnoreCase) >= 0 ? a.FaceLayers : a.BodyLayers;
-                    if (!HasPath(list, chosen)) list.Add(new LayerDraft { Path = chosen, Tint = "#FFFFFF" });
+                    if (!HasPath(list, chosen)) list.Add(new LayerDraft { Path = chosen, Tint = PathCatalog.DefaultTint(chosen) });
                     RefreshForm(); MarkDirty();
                 })));
 
@@ -697,13 +745,14 @@ namespace Personify.Editor
             var (pillGO, pillBtn, pillTxt) = UIFactory.ButtonWithLabel("pick", display + "   ▾", row.transform, Theme.SurfaceInput, 0, 30);
             if (pillTxt != null) { pillTxt.fontSize = Theme.Body; pillTxt.alignment = TextAnchor.MiddleLeft; pillTxt.rectTransform.offsetMin = new Vector2(10, 0); pillTxt.color = current != null ? Theme.TextPrimary : Theme.TextMuted; }
             var ple = pillGO.AddComponent<LayoutElement>(); ple.flexibleWidth = 1; ple.minHeight = 30;
-            string keepTint = current?.Tint ?? "#FFFFFF";
+            string keepTint = current?.Tint;   // null when the slot was empty - a fresh pick takes the vanilla tint
             string currentPath = current?.Path ?? "";
             pillBtn.onClick.AddListener((UnityAction)(() =>
                 OptionPicker.Show(_canvasGO.transform, "Choose " + label, options, currentPath, allowNone: true, chosen =>
                 {
                     list.RemoveAll(x => x != null && !string.IsNullOrEmpty(x.Path) && paths.Contains(x.Path));
-                    if (!string.IsNullOrEmpty(chosen)) list.Add(new LayerDraft { Path = chosen, Tint = keepTint });
+                    if (!string.IsNullOrEmpty(chosen))
+                        list.Add(new LayerDraft { Path = chosen, Tint = keepTint ?? PathCatalog.DefaultTint(chosen) });
                     RefreshForm(); MarkDirty();
                 })));
 
@@ -734,6 +783,13 @@ namespace Personify.Editor
 
         private static void SliderRow(string label, float min, float max, float value, Action<float> set, bool whole = false)
         {
+            // The Experimental tab writes the same fields on much wider rails, and a project can be hand-edited to
+            // anything. Widen the row to fit what it was handed instead of pinning the handle at an end - a slider
+            // that cannot reach the number printed beside it is a slider that lies, and the first drag would
+            // silently snap the value back into range.
+            if (value < min) min = value;
+            if (value > max) max = value;
+
             var row = new GameObject("sliderRow"); row.transform.SetParent(_formContent, false); row.AddComponent<RectTransform>();
             var rle = row.AddComponent<LayoutElement>(); rle.minHeight = 28; rle.preferredHeight = 28; rle.flexibleWidth = 1;
             var h = row.AddComponent<HorizontalLayoutGroup>();
@@ -817,14 +873,39 @@ namespace Personify.Editor
             plusBtn.onClick.AddListener((UnityAction)(() => Apply(current + 1)));
         }
 
+        // Eyelid colour follows the skin the way the vanilla creator does it, until someone here says otherwise.
+        // Vanilla keeps the same escape hatch behind a held Ctrl key (CustomizationManager.SkinColorChanged); the
+        // Advanced tab makes it a switch, and per eye, because nothing in the format says the two have to match.
+        private static void EyelidColorRows(AppearanceDraft a)
+        {
+            ToggleRow("Eyelids follow skin", a.EyelidFollowsSkin, v =>
+            {
+                a.EyelidFollowsSkin = v;
+                if (v) VanillaDerived.SetSkinColor(a, a.SkinColor);
+                RefreshForm();
+            });
+            if (a.EyelidFollowsSkin) return;
+            ColorRow("L. eyelid", a.LeftEyeLidColor, v => a.LeftEyeLidColor = v);
+            ColorRow("R. eyelid", a.RightEyeLidColor, v => a.RightEyeLidColor = v);
+        }
+
+        // A muted one-liner under a control, for a constraint the row itself cannot show.
+        private static void Caption(string text)
+        {
+            var t = UIFactory.Text("cap", text, _formContent, Theme.Caption, TextAnchor.UpperLeft);
+            t.color = Theme.TextMuted; t.raycastTarget = false; t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.gameObject.AddComponent<LayoutElement>().minHeight = 30;
+        }
+
         // Gender is a binary choice, not a magnitude - a labelled two-segment control (reads as a toggle) instead of
-        // a slider. Maps to the vanilla 0..1 Gender field (0 = male, 1 = female).
+        // a slider. Maps to the vanilla 0..1 Gender field (0 = male, 1 = female). The Advanced tab swaps this for
+        // the raw slider, since the field is continuous and stock NPCs live between the two ends.
         private static void GenderRow(AppearanceDraft a)
         {
             string[] labels = { "Male", "Female" };
-            int idx = a.Gender >= 0.5f ? 1 : 0;
+            int idx = a.Gender > 0.5f ? 1 : 0;   // vanilla's own split, so the label and the underwear rule agree
             var row = Components.FormRow(_formContent, "Gender", null, out Transform slot, stacked: false, height: 30);
-            var segGO = Components.Segmented(slot, labels, idx, i => { a.Gender = i == 0 ? 0f : 1f; MarkDirty(); }, out _);
+            var segGO = Components.Segmented(slot, labels, idx, i => { VanillaDerived.SetGender(a, i == 0 ? 0f : 1f); MarkDirty(); }, out _);
             StretchFill(segGO.GetComponent<RectTransform>());
         }
 
@@ -969,9 +1050,11 @@ namespace Personify.Editor
         private static void LayerSection(string title, List<LayerDraft> list, List<PathOption> catalog, string kindLabel, bool allowCustomImport = true, bool? inkPlacementFace = null)
         {
             Components.SectionHeader(_formContent, title + " (" + (list?.Count ?? 0) + ")");
+            bool face = inkPlacementFace == true;
+            if (face) Caption("Slots are assigned by role, not by list order: the mouth and the facial hair get the two fixed ones, three more layers render behind them.");
             if (list != null)
                 for (int i = 0; i < list.Count; i++)
-                    LayerRow(list, list[i]);
+                    LayerRow(list, list[i], face);
 
             var (addGO, addBtn, _) = UIFactory.ButtonWithLabel("addlyr", "+ Add " + kindLabel, _formContent, Theme.Accent, 0, 32);
             addGO.AddComponent<LayoutElement>().minHeight = 32;
@@ -990,7 +1073,8 @@ namespace Personify.Editor
                         list.Add(new LayerDraft { Source = rel, Tint = "#FFFFFF" });
                     }
                     else
-                        list.Add(new LayerDraft { Path = chosen, Tint = "#FFFFFF" });
+                        list.Add(new LayerDraft { Path = chosen, Tint = PathCatalog.DefaultTint(chosen) });
+                    VanillaDerived.ApplyDerivedTints(_selected?.Appearance);
                     RefreshForm(); MarkDirty();
                 })));
 
@@ -1021,9 +1105,12 @@ namespace Personify.Editor
 
         // One existing layer/accessory entry: a visibility eye (leftmost), a clickable tint swatch (opens ColorPicker),
         // the display name, and a remove (X) button. Positioned with explicit anchors (not a layout group).
-        private static void LayerRow(List<LayerDraft> list, LayerDraft l)
+        // In a face section the name is prefixed with the slot role the layer will actually take, since that is
+        // decided by what the layer IS and not by where it sits in this list.
+        private static void LayerRow(List<LayerDraft> list, LayerDraft l, bool face = false)
         {
             string desc = !string.IsNullOrWhiteSpace(l.Source) ? "PNG " + Path.GetFileName(l.Source) : PathCatalog.DisplayName(l.Path);
+            if (face) desc = FaceRoleTag(l) + desc;
             LayerDraft captured = l;
 
             var row = UIFactory.Panel("lyr", _formContent, Theme.BgElevated);
@@ -1045,8 +1132,11 @@ namespace Personify.Editor
             var swrt = swatchGO.GetComponent<RectTransform>();
             swrt.anchorMin = new Vector2(0, 0.5f); swrt.anchorMax = new Vector2(0, 0.5f); swrt.pivot = new Vector2(0, 0.5f);
             swrt.anchoredPosition = new Vector2(42, 0); swrt.sizeDelta = new Vector2(24, 24);
+            // allowAlpha: a layer tint's alpha is its strength - vanilla's freckles and wrinkles are black at a
+            // fraction of one, which is the only way to dial a detail down instead of stamping it on at full.
             swBtn.onClick.AddListener((UnityAction)(() =>
-                ColorPicker.Show(_canvasGO.transform, "Layer tint", l.Tint, newHex => { l.Tint = newHex; swImg.color = Preview.Hex(newHex, Color.white); MarkDirty(); })));
+                ColorPicker.Show(_canvasGO.transform, "Layer tint", l.Tint,
+                    newHex => { l.Tint = newHex; swImg.color = Preview.Hex(newHex, Color.white); MarkDirty(); }, allowAlpha: true)));
 
             var t = UIFactory.Text("t", desc, row.transform, Theme.Body, TextAnchor.MiddleLeft);
             t.raycastTarget = false;
@@ -1078,6 +1168,15 @@ namespace Personify.Editor
             }
             RenderEye();
             eyeBtn.onClick.AddListener((UnityAction)(() => { captured.Visible = !captured.Visible; RenderEye(); MarkDirty(); }));
+        }
+
+        // Which of vanilla's face slots this layer will occupy. Mouth and facial hair are matched by path
+        // (DooDesch.AvatarKit.AvatarLayerSlots), everything else queues for the three free slots in list order.
+        private static string FaceRoleTag(LayerDraft l)
+        {
+            if (AvatarLayerSlots.IsMouthLayer(l.Path)) return "[mouth] ";
+            if (AvatarLayerSlots.IsFacialHairLayer(l.Path)) return "[hair-tinted] ";
+            return "";
         }
 
         private static void ImportLayerFlow(List<LayerDraft> list, string kindLabel)

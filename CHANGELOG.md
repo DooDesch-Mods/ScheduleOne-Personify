@@ -3,6 +3,28 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-08-13
+
+### Added
+
+- Advanced now reaches every value the game's own NPCs use: gender as a slider, eyebrow angle from -15 to 15,
+  thickness up to 4, resting height from -2 to 2.
+- Eyelid colour can be set by hand: turn off "Eyelids follow skin" in Advanced and each eye gets its own row.
+- Layer tints carry an opacity channel, so a face detail can sit at part strength the way vanilla's freckles do.
+- Experimental adds unclamped body and face sliders: gender -3 to 4, height up to 4x, and eyebrow rails far
+  past anything vanilla uses.
+
+### Fixed
+
+- Eyelids take the skin colour. They stayed on the default tan, so a dark-skinned NPC ended up with pale lids.
+- The censor layer takes its tint from the skin colour, and the underwear swaps when you change the gender.
+- Face layers land in the slots the game reads them from. A freckle or eye-shadow layer could take the
+  facial-hair slot, where the game draws it in the hair colour.
+- A new face layer arrives black instead of white, which is how every stock NPC tints mouths, facial hair and
+  detail layers.
+- Upper and lower eyelid stay apart in Advanced. One slider per eye used to set both to the same value and
+  lose what the Character tab had set.
+
 ## [1.2.2] - 2026-08-01
 
 ### Changed

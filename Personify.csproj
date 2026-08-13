@@ -51,7 +51,7 @@
     <RootNamespace>Personify</RootNamespace>
     <AssemblyName>Personify</AssemblyName>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <Version>1.2.2</Version>
+    <Version>1.3.0</Version>
     <AssemblyVersion>1.2.2.0</AssemblyVersion>
     <FileVersion>1.2.2.0</FileVersion>
     <NoWarn>$(NoWarn);MSB3277;MSB3245;CS0436</NoWarn>

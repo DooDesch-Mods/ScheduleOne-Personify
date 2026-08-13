@@ -27,10 +27,16 @@ namespace Personify.Editor.Widgets
             "#6EC6E8", "#2F6FD6", "#24408E", "#1B2A4A", "#4A2E8E", "#7A3FB0", "#C83FB0", "#F25CB0", "#FF4FA3",
         };
 
-        public static void Show(Transform canvasRoot, string title, string initialHex, Action<string> onConfirm)
+        /// <summary>
+        /// Open the picker. <paramref name="allowAlpha"/> adds an A channel and lets the result come back as
+        /// "#RRGGBBAA" - layer tints carry their strength there (vanilla's freckles are black at a=0.59), while a
+        /// skin or hair colour has no use for it and gets the plain three-channel card.
+        /// </summary>
+        public static void Show(Transform canvasRoot, string title, string initialHex, Action<string> onConfirm, bool allowAlpha = false)
         {
             if (canvasRoot == null) return;
             Color32 current = Preview.Hex(initialHex, Color.white);
+            if (!allowAlpha) current.a = 255;
 
             var scrim = UIFactory.Panel("DD_ColorScrim", canvasRoot, new Color(0f, 0f, 0f, 0.6f), fullAnchor: true);
             scrim.transform.SetAsLastSibling();
@@ -44,7 +50,7 @@ namespace Personify.Editor.Widgets
             var cimg = card.GetComponent<Image>(); if (cimg != null) { cimg.sprite = Theme.RoundedSprite(); cimg.type = Image.Type.Sliced; }
             var crt = card.GetComponent<RectTransform>();
             crt.anchorMin = crt.anchorMax = new Vector2(0.5f, 0.5f); crt.pivot = new Vector2(0.5f, 0.5f);
-            crt.sizeDelta = new Vector2(420, 468);
+            crt.sizeDelta = new Vector2(420, allowAlpha ? 504 : 468);
             var ol = card.AddComponent<Outline>(); ol.effectColor = Theme.HairlineStrong; ol.effectDistance = new Vector2(1, -1);
 
             // A full-width "band" positioned `top` px below the card's top edge - the layout unit every row below
@@ -84,11 +90,12 @@ namespace Personify.Editor.Widgets
             hexLabel.color = Theme.TextMuted; hexLabel.raycastTarget = false;
             hexLabel.gameObject.AddComponent<LayoutElement>().minHeight = 16;
 
-            // R/G/B sliders (created below) need to be pushed to when the hex field or a preset changes; declared
-            // up-front so the hex field's callback (built next) can reach them.
-            var sliders = new Slider[3];
+            // R/G/B(/A) sliders (created below) need to be pushed to when the hex field or a preset changes;
+            // declared up-front so the hex field's callback (built next) can reach them.
+            var sliders = new Slider[4];
 
-            InputField hexInput = Components.TextInput(hexBlock.transform, Preview.HexOf(current), null, "#RRGGBB", 7);
+            InputField hexInput = Components.TextInput(hexBlock.transform, Preview.HexOf(current), null,
+                allowAlpha ? "#RRGGBBAA" : "#RRGGBB", allowAlpha ? 9 : 7);
             hexInput.gameObject.AddComponent<LayoutElement>().minHeight = 32;
 
             void Refresh() { swImg.color = current; hexInput.text = Preview.HexOf(current); }
@@ -100,12 +107,14 @@ namespace Personify.Editor.Widgets
                 if (sliders[0] != null) sliders[0].value = current.r;
                 if (sliders[1] != null) sliders[1].value = current.g;
                 if (sliders[2] != null) sliders[2].value = current.b;
+                if (sliders[3] != null) sliders[3].value = current.a;
             }
 
             // onEndEdit (fires on blur/Enter) - typing a hex value updates the swatch + sliders.
             hexInput.onEndEdit.AddListener((UnityAction<string>)(s =>
             {
                 current = Preview.Hex(s, current);
+                if (!allowAlpha) current.a = 255;
                 Refresh();
                 PushToSliders();
             }));
@@ -139,12 +148,14 @@ namespace Personify.Editor.Widgets
             ChannelRow(0, "R", 136, current.r, b => current.r = b);
             ChannelRow(1, "G", 172, current.g, b => current.g = b);
             ChannelRow(2, "B", 208, current.b, b => current.b = b);
+            if (allowAlpha) ChannelRow(3, "A", 244, current.a, b => current.a = b);
 
-            var presetLabel = UIFactory.Text("pl", "PRESETS", Band(244, 16), Theme.Caption, TextAnchor.LowerLeft, FontStyle.Bold);
+            float presetTop = allowAlpha ? 280 : 244;
+            var presetLabel = UIFactory.Text("pl", "PRESETS", Band(presetTop, 16), Theme.Caption, TextAnchor.LowerLeft, FontStyle.Bold);
             presetLabel.color = Theme.TextMuted; presetLabel.raycastTarget = false;
             var plrt = presetLabel.rectTransform; plrt.anchorMin = Vector2.zero; plrt.anchorMax = Vector2.one; plrt.offsetMin = Vector2.zero; plrt.offsetMax = Vector2.zero;
 
-            var presetBand = Band(262, 96);
+            var presetBand = Band(presetTop + 18, 96);
             var pg = presetBand.gameObject.AddComponent<GridLayoutGroup>();
             pg.cellSize = new Vector2(28, 26); pg.spacing = new Vector2(6, 6);
             pg.childAlignment = TextAnchor.UpperLeft;
@@ -157,7 +168,9 @@ namespace Personify.Editor.Widgets
                 string captured = hex;
                 pBtn.onClick.AddListener((UnityAction)(() =>
                 {
+                    byte keepAlpha = current.a;   // presets are RGB - a strength already dialled in survives the tap
                     current = Preview.Hex(captured, current);
+                    current.a = keepAlpha;
                     Refresh();
                     PushToSliders();
                 }));

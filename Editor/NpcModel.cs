@@ -45,6 +45,10 @@ namespace Personify.Editor
         [JsonProperty("eyebrowRestingAngle")] public float EyebrowRestingAngle { get; set; } = 0f;
         [JsonProperty("leftEyeLidColor")] public string LeftEyeLidColor { get; set; } = "#96785F";
         [JsonProperty("rightEyeLidColor")] public string RightEyeLidColor { get; set; } = "#96785F";
+        /// <summary>Editor-only: keep the eyelid colours on the skin colour, the way the vanilla creator does.
+        /// Turned off in the Advanced tab to colour the lids by hand. Omitted-from-JSON stays on, so a project made
+        /// before this existed still gets matching lids the first time its skin colour is touched.</summary>
+        [JsonProperty("eyelidFollowsSkin")] public bool EyelidFollowsSkin { get; set; } = true;
         [JsonProperty("leftEyeTop")] public float LeftEyeTop { get; set; } = 0.5f;
         [JsonProperty("leftEyeBottom")] public float LeftEyeBottom { get; set; } = 0.5f;
         [JsonProperty("rightEyeTop")] public float RightEyeTop { get; set; } = 0.5f;

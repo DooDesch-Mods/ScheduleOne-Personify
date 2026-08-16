@@ -86,6 +86,11 @@ All notable changes to Personify are documented here. This project adheres to
 
 - Clothing colour is easier to find: clothing rows now show a labelled "Colour" swatch.
 
+## [1.0.1] - 2026-07-10
+
+Not released. The tag points at the same commit as 1.1.1; there is no GitHub release and no Thunderstore
+version under this number.
+
 ## [1.0.0] - 2026-07-06
 
 Initial release.

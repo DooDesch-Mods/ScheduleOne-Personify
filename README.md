@@ -13,6 +13,7 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
+
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_QOA2ZwlAMSp6_kOfVij4ALg7/badge.svg)](https://mlvscan.com/attestations/att_QOA2ZwlAMSp6_kOfVij4ALg7)
 
 ## Project status

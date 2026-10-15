@@ -25,7 +25,7 @@ namespace Personify
 
             try
             {
-                API.Register(new GamemodeDescriptor
+                var desc = new GamemodeDescriptor
                 {
                     Id = "doodesch.personify",
                     DisplayName = "Personify",
@@ -35,13 +35,30 @@ namespace Personify
                     Surface = GamemodeSurface.MenuSpace,
                     OnLaunchSingleplayer = OnLaunch,
                     OnExitToHub = OnExit
-                });
+                };
+                AddHubIcon(desc);
+                API.Register(desc);
                 Log.Msg($"Personify {Info.Version} registered with Side Hustle.");
             }
             catch (System.Exception e)
             {
                 Log.Warning("Side Hustle not available, Personify cannot register: " + e.Message);
             }
+        }
+
+        private const string HubIconResource = "Personify.hub-icon.png";
+
+        // GamemodeDescriptor.IconResource exists since Side Hustle 2.5.0 and Personify supports older versions, so the
+        // field is set by name: an older Side Hustle registers Personify without an icon.
+        private static void AddHubIcon(GamemodeDescriptor desc)
+        {
+            try
+            {
+                var field = typeof(GamemodeDescriptor).GetField("IconResource");
+                if (field == null) { Log.Warning("Side Hustle is older than 2.5.0; Personify shows no icon in the hub."); return; }
+                field.SetValue(desc, HubIconResource);
+            }
+            catch (System.Exception e) { Log.Warning("Personify could not give the hub its icon: " + e.Message); }
         }
 
         private static void OnLaunch(LaunchContext ctx) => Editor.EditorUI.Open(ctx);

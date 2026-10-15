@@ -97,6 +97,10 @@
   <!-- UI icons (Lucide, ISC) embedded as Personify.Assets.Icons.<name>.png - e.g. the per-layer visibility eye. -->
   <ItemGroup>
     <EmbeddedResource Include="Assets/Icons/*.png" />
+    <!-- The package icon, drawn on Personify's tile in the Side Hustle hub (GamemodeDescriptor.IconResource). -->
+    <EmbeddedResource Include="thunderstore/icon.png">
+      <LogicalName>Personify.hub-icon.png</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <!-- Mod loader references -->

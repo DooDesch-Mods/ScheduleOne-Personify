@@ -48,8 +48,26 @@ namespace Personify.Editor
             catch (Exception e) { Core.Log?.Warning("[catalog] reflect " + t.Name + " failed: " + e.Message); return new List<string>(); }
         }
 
-        private static IEnumerable<PathOption> Group(string label, Type t) =>
-            ConstPaths(t).Select(p => new PathOption(label, DisplayName(p), p));
+        // S1API's path lists run ahead of or behind the game: 0.4.7 dropped a few objects the constants still name.
+        // An option that resolves to nothing would draw nothing, so it is left out once the library can tell.
+        private static IEnumerable<PathOption> Group(string label, Type t)
+        {
+            bool check = DooDesch.AvatarKit.AvatarLook.LibraryReady;
+            foreach (string p in ConstPaths(t))
+            {
+                if (check && !DooDesch.AvatarKit.AvatarLook.CanResolve(p)) { Core.Log?.Msg("[catalog] left out, not in this game version: " + p); continue; }
+                yield return new PathOption(label, DisplayName(p), p);
+            }
+        }
+
+        // Lists are kept once the library could check them; before that they are built fresh each time.
+        private static List<PathOption> Cached(ref List<PathOption> slot, Func<List<PathOption>> build)
+        {
+            if (slot != null) return slot;
+            List<PathOption> list = build();
+            if (DooDesch.AvatarKit.AvatarLook.LibraryReady) slot = list;
+            return list;
+        }
 
         /// <summary>Friendly name for a picker row: the last "/"-segment of the asset path, underscores as spaces
         /// (e.g. "Avatar/Layers/Face/Face_Agape" -&gt; "Face Agape"). The full path is still what gets stored.</summary>
@@ -83,21 +101,21 @@ namespace Personify.Editor
         private static List<PathOption> _hair, _face, _body, _accessories;
 
         /// <summary>All hair styles (HairPath). Source: CustomizationFields.HairStyle.</summary>
-        public static List<PathOption> HairStyles() => _hair ??=
-            Group("Hair", typeof(S1API.Entities.Appearances.CustomizationFields.HairStyle)).ToList();
+        public static List<PathOption> HairStyles() => Cached(ref _hair, () =>
+            Group("Hair", typeof(S1API.Entities.Appearances.CustomizationFields.HairStyle)).ToList());
 
         /// <summary>All face-layer options. Sources: FaceLayerFields.{Eyes,Face,FacialHair,FaceTattoos}.</summary>
-        public static List<PathOption> FaceLayers() => _face ??= new[]
+        public static List<PathOption> FaceLayers() => Cached(ref _face, () => new[]
         {
             Group("Eyes", typeof(S1API.Entities.Appearances.FaceLayerFields.Eyes)),
             Group("Face", typeof(S1API.Entities.Appearances.FaceLayerFields.Face)),
             Group("Facial hair", typeof(S1API.Entities.Appearances.FaceLayerFields.FacialHair)),
             Group("Face tattoos", typeof(S1API.Entities.Appearances.FaceLayerFields.FaceTattoos)),
-        }.SelectMany(g => g).ToList();
+        }.SelectMany(g => g).ToList());
 
         /// <summary>All body-layer options. Sources: BodyLayerFields.{Shirts,Pants,ChestTattoos,LeftArmTattoos,
         /// RightArmTattoos,Accessories(gloves)}.</summary>
-        public static List<PathOption> BodyLayers() => _body ??= new[]
+        public static List<PathOption> BodyLayers() => Cached(ref _body, () => new[]
         {
             Group("Shirts", typeof(S1API.Entities.Appearances.BodyLayerFields.Shirts)),
             Group("Pants", typeof(S1API.Entities.Appearances.BodyLayerFields.Pants)),
@@ -105,11 +123,11 @@ namespace Personify.Editor
             Group("Left arm tattoos", typeof(S1API.Entities.Appearances.BodyLayerFields.LeftArmTattoos)),
             Group("Right arm tattoos", typeof(S1API.Entities.Appearances.BodyLayerFields.RightArmTattoos)),
             Group("Gloves", typeof(S1API.Entities.Appearances.BodyLayerFields.Accessories)),
-        }.SelectMany(g => g).ToList();
+        }.SelectMany(g => g).ToList());
 
         /// <summary>All accessory options across every slot, grouped by slot (Head/Chest/Hands/Feet/Neck/Waist/
         /// Bottom/Facial hair) for the option-picker's section headers. Sources: AccessoryFields.*.</summary>
-        public static List<PathOption> Accessories() => _accessories ??= new[]
+        public static List<PathOption> Accessories() => Cached(ref _accessories, () => new[]
         {
             Group("Head", typeof(S1API.Entities.Appearances.AccessoryFields.Head)),
             Group("Chest", typeof(S1API.Entities.Appearances.AccessoryFields.Chest)),
@@ -119,7 +137,7 @@ namespace Personify.Editor
             Group("Waist", typeof(S1API.Entities.Appearances.AccessoryFields.Waist)),
             Group("Bottom", typeof(S1API.Entities.Appearances.AccessoryFields.Bottom)),
             Group("Facial hair", typeof(S1API.Entities.Appearances.AccessoryFields.FacialHairAccessory)),
-        }.SelectMany(g => g).ToList();
+        }.SelectMany(g => g).ToList());
 
         // --- Character (Basic) mode slot lists ------------------------------------------------------------------
         // The S1API "field" classes lump non-garment BASE layers (censor nipples, underwear, body hair) and TATTOOS

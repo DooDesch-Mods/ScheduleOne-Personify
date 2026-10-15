@@ -57,12 +57,14 @@ namespace Personify.Editor
             if (_canvasGO != null) { UnityEngine.Object.Destroy(_canvasGO); _canvasGO = null; }
             _screen = null; _project = null; _selected = null;
             _railList = null; _formContent = null; _titleText = null;
+            _bottomBar = null; ForgetMapView();
             _previewDirty = false;
         }
 
         public static void Tick()
         {
             try { Toast.Tick(); } catch { }
+            if (_mode == FormMode.World) WorldTick();
             if (!_previewDirty || Time.time - _lastEdit <= 0.12f) return;
             if (_project == null || _selected == null) { _previewDirty = false; return; }
 
@@ -94,6 +96,7 @@ namespace Personify.Editor
         private static void ClearScreen()
         {
             if (_screen != null) { UnityEngine.Object.Destroy(_screen); _screen = null; }
+            _bottomBar = null; ForgetMapView();
         }
 
         private static void MarkDirty() { _previewDirty = true; _lastEdit = Time.time; }
@@ -288,6 +291,7 @@ namespace Personify.Editor
         private static void BuildBottomBar()
         {
             var bar = UIFactory.Panel("BottomBar", _screen.transform, Theme.WithAlpha(Theme.BgElevated, 0.9f));
+            _bottomBar = bar;
             var img = bar.GetComponent<Image>(); if (img != null) { img.sprite = Theme.RoundedSprite(); img.type = Image.Type.Sliced; }
             var rt = bar.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0); rt.pivot = new Vector2(0.5f, 0);
@@ -351,13 +355,14 @@ namespace Personify.Editor
 
         // --- form (selected NPC) ---
 
-        private enum FormMode { Basic, Advanced, Experimental }
+        private enum FormMode { Basic, Advanced, Experimental, World }
         private static FormMode _mode = FormMode.Basic;
 
         private static void RefreshForm()
         {
             if (_formContent == null) return;
             UIFactory.ClearChildren(_formContent);
+            SyncWorldView();
             if (_selected == null)
             {
                 var t = UIFactory.Text("none", "No NPC selected. Click \"+ Add NPC\".", _formContent, 13, TextAnchor.UpperLeft);
@@ -371,6 +376,7 @@ namespace Personify.Editor
             ModeToggle();
             if (_mode == FormMode.Basic) BuildBasicForm(n);
             else if (_mode == FormMode.Advanced) BuildAdvancedForm(n);
+            else if (_mode == FormMode.World) BuildWorldForm(n);
             else BuildExperimentalForm(n);
 
             Interactions.PolishButtons(_formContent);
@@ -384,9 +390,17 @@ namespace Personify.Editor
         {
             var row = new GameObject("mode"); row.transform.SetParent(_formContent, false); row.AddComponent<RectTransform>();
             var rle = row.AddComponent<LayoutElement>(); rle.minHeight = 34; rle.preferredHeight = 34; rle.flexibleWidth = 1;
-            int idx = _mode == FormMode.Basic ? 0 : _mode == FormMode.Advanced ? 1 : 2;
-            var seg = Components.Segmented(row.transform, new[] { "Character", "Advanced", "Experimental" }, idx,
-                i => { _mode = i == 0 ? FormMode.Basic : i == 1 ? FormMode.Advanced : FormMode.Experimental; RefreshForm(); }, out _);
+            int idx = (int)_mode;
+            var seg = Components.Segmented(row.transform, new[] { "Character", "Advanced", "Experimental", "World" }, idx,
+                i => { _mode = (FormMode)i; RefreshForm(); }, out Button[] segs, spacing: 4f);
+            // Four tabs share the panel width; "Experimental" wraps mid-word at the theme's label size.
+            foreach (Button b in segs)
+            {
+                Text t = b.GetComponentInChildren<Text>();
+                if (t == null) continue;
+                t.horizontalOverflow = HorizontalWrapMode.Overflow;
+                t.resizeTextForBestFit = true; t.resizeTextMaxSize = t.fontSize; t.resizeTextMinSize = 10;
+            }
             StretchFill(seg.GetComponent<RectTransform>());
         }
 
@@ -1002,10 +1016,27 @@ namespace Personify.Editor
 
         private static void RemoveRow()
         {
-            var (go, btn, _) = UIFactory.ButtonWithLabel("rm", "Remove this NPC", _formContent, Theme.Button, 0, 32);
-            go.AddComponent<LayoutElement>().minHeight = 32;
-            btn.onClick.AddListener((UnityAction)(() =>
-                Components.ConfirmDialog(_canvasGO.transform, "Remove NPC?", $"Remove \"{_selected?.Name}\" from this pack?", "Remove", () => RemoveSelected())));
+            ButtonPair("Duplicate", Theme.Button, () => DuplicateSelected(),
+                "Remove", Theme.Button, () =>
+                    Components.ConfirmDialog(_canvasGO.transform, "Remove NPC?", $"Remove \"{_selected?.Name}\" from this pack?", "Remove", () => RemoveSelected()));
+        }
+
+        // A copy keeps everything (look, behaviour, day plan) but gets its own name, and with it its own id.
+        private static void DuplicateSelected()
+        {
+            if (_project == null || _selected == null) return;
+            NpcDraft copy;
+            try { copy = Newtonsoft.Json.JsonConvert.DeserializeObject<NpcDraft>(Newtonsoft.Json.JsonConvert.SerializeObject(_selected)); }
+            catch (Exception e) { Core.Log?.Error($"[editor] duplicating '{_selected.Name}' failed: {e.Message}"); Toast.Show("Could not duplicate this NPC.", Severity.Danger); return; }
+            copy.SaveId = null;
+            string baseName = _selected.Name + " copy";
+            string name = baseName;
+            for (int i = 2; _project.Npcs.Exists(x => Ids.Make(_project.Name, x.Name) == Ids.Make(_project.Name, name)); i++) name = baseName + " " + i;
+            copy.Name = name;
+            _project.Npcs.Insert(_project.Npcs.IndexOf(_selected) + 1, copy);
+            _selected = copy;
+            Core.Log?.Msg($"[editor] duplicated NPC as '{name}'.");
+            RefreshRail(); RefreshForm(); MarkDirty();
         }
 
         private static void ArchetypeRow(BackroomsDraft b)

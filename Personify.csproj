@@ -141,6 +141,15 @@
       <HintPath>$(GameManagedPath)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- NakedAppearance / AvatarObject: the 0.4.7 avatar system (via AvatarLayers.props). -->
+    <Reference Include="Il2CppScheduleOne.Core">
+      <HintPath>$(GameManagedPath)/Il2CppScheduleOne.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppFishNet.Runtime">
+      <HintPath>$(GameManagedPath)/Il2CppFishNet.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="S1API.Il2Cpp.MelonLoader">
       <HintPath>$(WorkspaceLibPath)/il2cpp/s1api/S1API.Il2Cpp.MelonLoader.dll</HintPath>
       <Private>false</Private>
@@ -176,6 +185,15 @@
     <!-- SkinnedMeshRenderer (Experimental tab body-mesh hide, via AvatarDistortion.props). -->
     <Reference Include="UnityEngine.AnimationModule">
       <HintPath>$(GameManagedPath)/UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- NavMesh + raycasts for the schedule map ground (Editor/World/NavGround.cs). -->
+    <Reference Include="UnityEngine.AIModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.AIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">

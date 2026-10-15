@@ -7,7 +7,7 @@
 > [Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel) NPC pack. Runs as a
 > [Side Hustle](https://github.com/DooDesch-Mods/ScheduleOne-SideHustle) gamemode, right from the main menu.
 
-![Version](https://img.shields.io/badge/version-1.2.2-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
@@ -15,6 +15,8 @@
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_QOA2ZwlAMSp6_kOfVij4ALg7/badge.svg)](https://mlvscan.com/attestations/att_QOA2ZwlAMSp6_kOfVij4ALg7)
+
+![The World tab day plan next to the NPC driving through town](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/header.jpg)
 
 ## Project status
 
@@ -38,6 +40,11 @@ report at [support.doodesch.de/personify](https://support.doodesch.de/personify)
   facial hair, facial details, eyes, eyebrows, top/bottom, shoes, headwear, eyewear, tattoos.
 - **Advanced mode** opens the full avatar surface: stacked face/body/accessory layers, custom PNG
   layers imported from disk, per-layer visibility and tint, and extension blocks for consumer mods.
+- **World tab.** Click the town map to set where an NPC starts the day; every later click opens a
+  menu with what fits there (go inside, sit, hang out, drive to a car park). Drag pins, undo, and see
+  the whole day on a 24 h strip.
+- **Cars for Drive stops.** The pack carries its own car (Shitbox by default), so exported NPCs
+  drive with Personnel alone.
 - **Inkorporated integration.** If [Inkorporated](https://github.com/DooDesch-Mods/ScheduleOne-Inkorporated)
   is installed, its tattoo packs are offered directly in the tattoo picker; chosen art is copied into
   your pack, so the export stays self-contained.
@@ -46,6 +53,15 @@ report at [support.doodesch.de/personify](https://support.doodesch.de/personify)
   the wrapper to publish.
 - **Duplicate-proof ids.** NPC ids are derived automatically as `packname_npcname`; the editor
   rejects duplicate names at export.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![A full day plan on the town map](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/day-plan.jpg) | ![The place menu on a map click](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/place-menu.jpg) |
+| ![A Drive stop with its car](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/drive-stop.jpg) | ![Character mode with the live preview](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/character.jpg) |
+
+![An exported NPC driving its own car, with only Personnel installed](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/on-the-road.jpg)
 
 ## Requirements
 
@@ -74,6 +90,7 @@ Side Hustle) are pulled in automatically.
 1. Main menu -> **Side Hustle** -> **Personify**.
 2. Create a project (this becomes your pack name) and add NPCs with **+ Add NPC**.
 3. Design in **Character** mode; switch to **Advanced** for layers, custom PNGs and extensions.
+   Plan the day in **World**: the first map click sets the start point, later clicks add stops.
 4. **Export** writes the pack to `UserData/Personify/Exports/<name>/` and opens the folder.
 5. Copy the inner `Personnel/Packs/<name>` folder into `UserData/Personnel/Packs/` to test locally,
    or upload the whole export to Thunderstore (add a 256x256 `icon.png`).

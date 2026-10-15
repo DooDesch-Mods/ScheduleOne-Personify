@@ -12,6 +12,8 @@ namespace Personify.Editor
         public bool Ok;
         public string Message;
         public string ExportDir;
+        /// <summary>Where the pack was installed for Personnel, or null when Personnel is not loaded.</summary>
+        public string InstalledDir;
     }
 
     /// <summary>
@@ -71,11 +73,21 @@ namespace Personify.Editor
                 CopyIconIfAny(project, exportRoot);
 
                 Core.Log?.Msg($"[export] wrote pack '{packName}' ({project.Npcs.Count} NPC) -> {exportRoot}");
+
+                // The pack only does anything once it sits in Personnel's pack folder, and copying it there by hand
+                // was the step every first-time user got stuck on. Mirror it in directly when Personnel is around.
+                // Personnel reads its packs once at startup, so the NPCs arrive with the next game start.
+                string installed = PersonnelVersion(out bool hasPersonnel) != null && hasPersonnel
+                    ? InstallIntoPersonnel(packDir, packName)
+                    : null;
                 return new ExportResult
                 {
                     Ok = true,
                     ExportDir = exportRoot,
-                    Message = $"Exported {project.Npcs.Count} NPC(s). Copy the 'Personnel/Packs/{packName}' folder into UserData/Personnel/Packs to test."
+                    InstalledDir = installed,
+                    Message = installed != null
+                        ? $"Exported {project.Npcs.Count} NPC(s) and installed the pack. Restart the game to meet them in a save."
+                        : $"Exported {project.Npcs.Count} NPC(s). Install Personnel to use the pack in game."
                 };
             }
             catch (Exception e)
@@ -309,9 +321,36 @@ Thunderstore requires a 256x256 `icon.png` in this folder before upload - add on
             catch (Exception e) { Core.Log?.Warning("[export] icon copy failed: " + e.Message); }
         }
 
-        // Read Personnel's version at runtime (reflection, so this mod never references Personnel).
-        private static string PersonnelVersion()
+        /// <summary>
+        /// Replaces UserData/Personnel/Packs/&lt;pack&gt; with the freshly exported pack. Only that one folder is
+        /// touched, and it is the folder this same export wrote last time. Returns the target, or null on failure.
+        /// </summary>
+        private static string InstallIntoPersonnel(string packDir, string packName)
         {
+            string target = Path.Combine(MelonLoader.Utils.MelonEnvironment.UserDataDirectory, "Personnel", "Packs", packName);
+            try
+            {
+                Directory.CreateDirectory(target);
+                EmptyDirectory(target);
+                foreach (string f in Directory.GetFiles(packDir))
+                    File.Copy(f, Path.Combine(target, Path.GetFileName(f)), true);
+                Core.Log?.Msg($"[export] installed pack '{packName}' -> {target}");
+                return target;
+            }
+            catch (Exception e)
+            {
+                Core.Log?.Error($"[export] install into Personnel failed ({target}): {e.Message}");
+                return null;
+            }
+        }
+
+        private static string PersonnelVersion() => PersonnelVersion(out _) ?? "1.0.0";
+
+        // Read Personnel's version at runtime (reflection, so this mod never references Personnel). Null when
+        // Personnel is not loaded.
+        private static string PersonnelVersion(out bool loaded)
+        {
+            loaded = false;
             try
             {
                 var t = typeof(MelonLoader.MelonBase);
@@ -323,12 +362,16 @@ Thunderstore requires a 256x256 `icon.png` in this folder before upload - add on
                         var info = m?.GetType().GetProperty("Info")?.GetValue(m);
                         var name = info?.GetType().GetProperty("Name")?.GetValue(info) as string;
                         if (name == "Personnel")
+                        {
+                            loaded = true;
                             return info.GetType().GetProperty("Version")?.GetValue(info) as string ?? "1.0.0";
+                        }
                     }
                 }
+                Core.Log?.Msg("[export] Personnel is not loaded - the pack is exported but not installed.");
             }
-            catch { }
-            return "1.0.0";
+            catch (Exception e) { Core.Log?.Warning("[export] could not read the Personnel version: " + e.Message); }
+            return null;
         }
 
         private static string NormalizeVersion(string v)

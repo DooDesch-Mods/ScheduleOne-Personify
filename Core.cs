@@ -48,6 +48,12 @@ namespace Personify
 
         private static void OnExit(LaunchContext ctx) => Editor.EditorUI.Close();
 
+        // The World tab's map comes out of a loaded save; see Editor.World.WorldCapture.
+        public override void OnSceneWasInitialized(int buildIndex, string sceneName)
+        {
+            if (sceneName == "Main") Editor.World.WorldCapture.OnMainScene();
+        }
+
         public override void OnSceneWasUnloaded(int buildIndex, string sceneName)
         {
             if (sceneName == "Menu")

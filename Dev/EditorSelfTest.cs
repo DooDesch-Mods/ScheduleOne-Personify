@@ -15,7 +15,15 @@ namespace Personify.Editor
     //   pick <label>   -> click the row with that display label in the currently open option picker
     //   skin #RRGGBB   -> drive the skin colour the way the Skin row does, then dump
     //   gender m|f     -> drive the gender toggle the way the Gender row does, then dump
-    //   tab <name>     -> switch to character | advanced | experimental
+    //   tab <name>     -> switch to character | advanced | experimental | world
+    //   world click <x> <z>      -> click the World map at that world position, the way a mouse click does
+    //   world choose <n>         -> pick entry n (1-based) of the open place menu
+    //   world pin <i|spawn>      -> click a pin; world drag <i|spawn> <x> <z> -> drag it there and let go
+    //   world hover <x> <z>      -> show the hover ring the mouse would show there
+    //   world undo               -> press Undo
+    //   world select <i|spawn|none> -> select stop i (1-based), the start point, or nothing
+    //   world focus <x> <z> [zoom] -> centre the map on a world position
+    //   world dump              -> log the start point, every stop and what the map shows
     //   eyelids on|off -> flip the "Eyelids follow skin" switch
     //   scroll <0..1>  -> move the form's scroll position (1 = top, 0 = bottom)
     //   set <f> <v>    -> write one appearance float (gender|height|weight|pupil|browscale|browthick|
@@ -23,6 +31,7 @@ namespace Personify.Editor
     //   packs          -> save and go back to the pack-select screen
     //   open <folder>  -> load that pack folder the way clicking its row does
     //   newpack <name> -> create a pack seeded from the menu character and open it
+    //   resolve        -> resolve every catalog path against the game's avatar object library and log the misses
     //   dump           -> log the AvatarSettings the selected NPC actually builds (colours + layer order),
     //                     which is the only way to check the derived values without a mouse
     // Each command file is consumed (deleted) and progress is logged with a [selftest] prefix.
@@ -48,7 +57,7 @@ namespace Personify.Editor
                 cmd = File.ReadAllText(path).Trim();
                 File.Delete(path);
             }
-            catch { return; }
+            catch (Exception e) { Core.Log?.Warning("[selftest] could not read the command file: " + e.Message); return; }
             if (string.IsNullOrEmpty(cmd)) return;
 
             if (cmd == "inkpicker") { _stStep = 1; _stStepAt = Time.unscaledTime; Core.Log?.Msg("[selftest] inkpicker starting"); }
@@ -56,6 +65,8 @@ namespace Personify.Editor
             else if (cmd.StartsWith("skin ", StringComparison.Ordinal)) SelfTestSkin(cmd.Substring(5).Trim());
             else if (cmd.StartsWith("gender ", StringComparison.Ordinal)) SelfTestGender(cmd.Substring(7).Trim());
             else if (cmd == "dump") SelfTestDump();
+            else if (cmd == "resolve") SelfTestResolve();
+            else if (cmd.StartsWith("world ", StringComparison.Ordinal)) SelfTestWorld(cmd.Substring(6).Trim());
             else if (cmd.StartsWith("tab ", StringComparison.Ordinal)) SelfTestTab(cmd.Substring(4).Trim());
             else if (cmd.StartsWith("eyelids ", StringComparison.Ordinal)) SelfTestEyelids(cmd.Substring(8).Trim());
             else if (cmd.StartsWith("scroll ", StringComparison.Ordinal)) SelfTestScroll(cmd.Substring(7).Trim());
@@ -164,6 +175,11 @@ namespace Personify.Editor
 
         private static void SelfTestNewPack(string name)
         {
+            if (!IsOpen)
+            {
+                Core.Log?.Msg("[selftest] editor was closed, opening it first");
+                Open(new LaunchContext());
+            }
             _project = ProjectStore.Create(name);
             if (_project.Npcs.Count > 0) _project.Npcs[0].Appearance = Preview.SeedFromMenu();
             ProjectStore.Save(_project);
@@ -205,9 +221,109 @@ namespace Personify.Editor
         {
             _mode = which.StartsWith("c", StringComparison.OrdinalIgnoreCase) ? FormMode.Basic
                   : which.StartsWith("e", StringComparison.OrdinalIgnoreCase) ? FormMode.Experimental
+                  : which.StartsWith("w", StringComparison.OrdinalIgnoreCase) ? FormMode.World
                   : FormMode.Advanced;
             RefreshForm();
             Core.Log?.Msg("[selftest] tab = " + _mode);
+        }
+
+        private static void SelfTestWorld(string arg)
+        {
+            string[] p = arg.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            float F(int i) => float.Parse(p[i], ci);
+            if (_selected == null) { Core.Log?.Warning("[selftest] world: no NPC selected"); return; }
+            if (_mode != FormMode.World) { _mode = FormMode.World; RefreshForm(); }
+            switch (p.Length > 0 ? p[0] : "")
+            {
+                case "click":
+                    MapClick(new Vector3(F(1), 0f, F(2)));
+                    break;
+                case "select":
+                    _worldSel = p[1] == "spawn" ? SelSpawn : p[1] == "none" ? SelNone : int.Parse(p[1], ci) - 1;
+                    RefreshForm();
+                    break;
+                case "choose":
+                {
+                    int i = int.Parse(p[1], ci) - 1;
+                    if (i < 0 || i >= _menuEntries.Count) { Core.Log?.Warning($"[selftest] world: no menu entry {p[1]} ({_menuEntries.Count} open)"); return; }
+                    Core.Log?.Msg("[selftest] world: choosing '" + _menuEntries[i].Label + "'");
+                    _menuEntries[i].Do();
+                    break;
+                }
+                case "pin":
+                    SelectPin(p[1] == "spawn" ? SelSpawn : int.Parse(p[1], ci) - 1);
+                    break;
+                case "drag":
+                    DropPin(p[1] == "spawn" ? SelSpawn : int.Parse(p[1], ci) - 1, new Vector3(F(2), 0f, F(3)));
+                    break;
+                case "undo":
+                    Undo();
+                    break;
+                case "hover":
+                {
+                    // Same order as the mouse: a pin under the cursor wins over a place.
+                    var at = new Vector3(F(1), 0f, F(2));
+                    if (_mapHover != null) _mapHover.text = HoverText(at);
+                    int pin = PinAt(WorldToScreen(at));
+                    if (pin != NoPin)
+                    {
+                        ShowPinTip(pin);
+                        Core.Log?.Msg($"[selftest] world: hover pin {(pin == SelSpawn ? "spawn" : (pin + 1).ToString())}, tip '{(_hoverLabel != null ? _hoverLabel.text : "")}'");
+                        break;
+                    }
+                    World.Place t = HoverTarget(at);
+                    ShowHoverTarget(t);
+                    Core.Log?.Msg($"[selftest] world: hover target {(t != null ? t.Kind + " '" + t.Label + "'" : "none")}");
+                    break;
+                }
+                case "focus":
+                    if (p.Length > 3) { _mapZoom = Mathf.Clamp(F(3), 1f, MapMaxZoom); ApplyMapTransform(true); }
+                    FocusWorld(new Vector3(F(1), 0f, F(2)));
+                    break;
+                case "dump":
+                    break;
+                default:
+                    Core.Log?.Warning("[selftest] world: unknown command '" + arg + "'");
+                    return;
+            }
+            SelfTestWorldDump();
+        }
+
+        // Stop blocks on the live track; the old track waits for Destroy and is inactive.
+        private static int TimelineBlocks()
+        {
+            if (_timeline == null) return -1;
+            for (int i = 0; i < _timeline.childCount; i++)
+            {
+                Transform c = _timeline.GetChild(i);
+                if (c.name != "track" || !c.gameObject.activeSelf) continue;
+                int count = 0;
+                for (int j = 0; j < c.childCount; j++) if (c.GetChild(j).name.StartsWith("s", StringComparison.Ordinal)) count++;
+                return count;
+            }
+            return 0;
+        }
+
+        private static int ActivePins()
+        {
+            if (_pinLayer == null) return -1;
+            int count = 0;
+            for (int i = 0; i < _pinLayer.childCount; i++) if (_pinLayer.GetChild(i).gameObject.activeSelf) count++;
+            return count;
+        }
+
+        private static void SelfTestWorldDump()
+        {
+            NpcDraft n = _selected;
+            World.WorldData w = World.WorldData.Current;
+            Core.Log?.Msg($"[selftest] world: map {(w?.Map != null ? "yes" : "no")}, places {w?.Places.Count ?? 0}, zoom {_mapZoom:0.00}, pan {_mapPan}, sel {_worldSel}, pins {ActivePins()}");
+            Core.Log?.Msg("[selftest] world: spawn " + (n.Spawn != null ? n.Spawn.ToString(Newtonsoft.Json.Formatting.None) : "none"));
+            if (n.Schedule is Newtonsoft.Json.Linq.JArray a)
+                for (int i = 0; i < a.Count; i++)
+                    Core.Log?.Msg($"[selftest] world: stop {i + 1} {World.ScheduleEdit.Describe(a[i] as Newtonsoft.Json.Linq.JObject)} | {a[i].ToString(Newtonsoft.Json.Formatting.None)}");
+            if (_mapHover != null) Core.Log?.Msg("[selftest] world: hint '" + _mapHover.text + "'");
+            Core.Log?.Msg($"[selftest] world: menu {(_menu != null ? string.Join(" | ", _menuEntries.ConvertAll(m => m.Label)) : "closed")}, undo steps {_history.Count - 1}, timeline blocks {TimelineBlocks()}");
         }
 
         private static void SelfTestEyelids(string onOff)
@@ -258,6 +374,32 @@ namespace Personify.Editor
                 var l = s.BodyLayerSettings[i];
                 Core.Log?.Msg($"[selftest] body[{i}] {Preview.HexOf(l.layerTint)}  {l.layerPath}");
             }
+        }
+
+        // Every option the pickers offer must turn into an avatar object on this game version; a miss is an option
+        // that silently shows nothing on the character.
+        private static void SelfTestResolve()
+        {
+            var groups = new (string Name, System.Collections.Generic.List<PathOption> List)[]
+            {
+                ("hair", PathCatalog.HairStyles()), ("face", PathCatalog.FaceLayers()),
+                ("body", PathCatalog.BodyLayers()), ("accessories", PathCatalog.Accessories()),
+                ("tattoos", PathCatalog.Tattoos()),
+            };
+            int total = 0, missing = 0;
+            foreach (var g in groups)
+            {
+                int miss = 0;
+                foreach (PathOption o in g.List)
+                {
+                    total++;
+                    if (DooDesch.AvatarKit.AvatarLook.CanResolve(o.Path)) continue;
+                    miss++; missing++;
+                    Core.Log?.Warning($"[selftest] resolve miss ({g.Name}): {o.Path}");
+                }
+                Core.Log?.Msg($"[selftest] resolve {g.Name}: {g.List.Count - miss}/{g.List.Count}");
+            }
+            Core.Log?.Msg($"[selftest] resolve done: {total - missing}/{total} paths resolve");
         }
 
         private static Button SelfTestFindButton(Transform root, string goName)

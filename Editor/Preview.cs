@@ -14,13 +14,15 @@ namespace Personify.Editor
     /// <summary>
     /// Applies a designed NPC to the live menu avatar so it can be seen and rotated. A draft is turned into a fresh
     /// <see cref="AvatarSettings"/> (the SAME mapping the Personnel provider uses) and loaded onto the menu rig, so
-    /// the preview matches the shipped NPC exactly. Custom PNG layers are realised via S1API's AvatarLayerFactory.
-    /// A baseline of the untouched menu character is captured on open and restored on close.
+    /// the preview matches the shipped NPC exactly. Custom PNG layers are realised via AvatarLook.RegisterCustomLayer.
+    /// A baseline of the untouched menu character is captured before the first apply and restored on close.
     /// </summary>
     public static class Preview
     {
         private static Avatar _avatar;
-        private static AppearanceDraft _menuBaseline;   // the untouched menu look, for restore + "seed new NPC"
+        private static AppearanceDraft _menuBaseline;   // the untouched menu look as a draft, for "seed new NPC"
+        private static AvatarLook.Snapshot _menuSnapshot;   // the same look as the game holds it, for an exact restore
+        private static bool _baselineLocked;   // set by the first apply: from then on the avatar shows a draft, not the menu look
         // Registered custom layers this session (dedup + cleanup). key -> resource path.
         private static readonly Dictionary<string, string> _customLayers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private static readonly List<Texture2D> _ownedTextures = new List<Texture2D>();
@@ -34,9 +36,9 @@ namespace Personify.Editor
                 var rigs = UnityEngine.Object.FindObjectsOfType<S1MenuRig>(true);
                 if (rigs == null || rigs.Length == 0) return false;
                 _avatar = rigs[0].Avatar;
-                if (_avatar != null && _menuBaseline == null)
-                    _menuBaseline = CaptureBaseline();
-                return _avatar != null;
+                if (_avatar == null) { Core.Log?.Warning("[preview] the menu rig has no avatar."); return false; }
+                TryCaptureBaseline();
+                return true;
             }
             catch (Exception e) { Core.Log?.Warning("[preview] find avatar: " + e.Message); return false; }
         }
@@ -54,6 +56,8 @@ namespace Personify.Editor
             try
             {
                 if (!EnsureAvatar() || npc == null) return false;
+                TryCaptureBaseline();
+                _baselineLocked = true;
                 AvatarSettings s = BuildSettings(project, npc.Appearance);
                 if (s == null) return false;
                 AvatarLayerSlots.LoadAndClean(_avatar, s);
@@ -79,11 +83,11 @@ namespace Personify.Editor
             try
             {
                 RestoreRig();
-                if (_avatar != null && _menuBaseline != null)
-                {
-                    AvatarLayerSlots.LoadAndClean(_avatar, BuildSettings(null, _menuBaseline));
-                    AvatarDistortion.Apply(_avatar, ToDistortionEntries(_menuBaseline.Distortion));   // reset any bone scale left over from editing
-                }
+                if (_avatar == null) return;
+                if (_menuSnapshot != null) AvatarLook.Restore(_avatar, _menuSnapshot);
+                else if (_menuBaseline != null) AvatarLayerSlots.LoadAndClean(_avatar, BuildSettings(null, _menuBaseline));
+                else Core.Log?.Msg("[preview] no menu look was captured - the menu character keeps the last preview.");
+                AvatarDistortion.Apply(_avatar, null);   // reset any bone scale left over from editing
             }
             catch (Exception e) { Core.Log?.Warning("[preview] exit: " + e.Message); }
         }
@@ -98,21 +102,22 @@ namespace Personify.Editor
                 var rigs = UnityEngine.Object.FindObjectsOfType<S1MenuRig>(true);
                 if (rigs != null) rigCount = rigs.Length;
                 if (!EnsureAvatar()) return "rigs=" + rigCount + " no avatar";
-                var cur = _avatar.CurrentSettings;
+                var cur = _avatar.Appearance != null ? _avatar.Appearance.AppliedNakedAppearance : null;
                 string id = _avatar.gameObject != null
                     ? _avatar.gameObject.name + "#" + _avatar.gameObject.GetInstanceID() +
                       (_avatar.gameObject.activeInHierarchy ? " active" : " INACTIVE")
                     : "(no gameObject)";
-                if (cur == null) return "rigs=" + rigCount + " " + id + " settings=null";
-                return $"rigs={rigCount} {id} gender={cur.Gender:0.00} height={cur.Height:0.00} " +
-                       $"weight={cur.Weight:0.00} skin={HexOf(cur.SkinColor)} face={cur.FaceLayerSettings?.Count ?? -1}";
+                if (cur == null) return "rigs=" + rigCount + " " + id + " appearance=null";
+                int worn = _avatar.Appearance._wornObjects != null ? _avatar.Appearance._wornObjects.Count : -1;
+                return $"rigs={rigCount} {id} gender={cur.Gender:0.00} height={cur.Height / AvatarLook.HeightScale:0.00} " +
+                       $"weight={cur.Weight:0.00} skin={HexOf(cur.SkinColor)} objects={cur.AvatarObjects?.Length ?? -1} worn={worn}";
             }
             catch (Exception e) { return "live summary threw: " + e.Message; }
         }
 
         /// <summary>How many body meshes the live avatar has - drives how many "Body mesh N" hide rows the
         /// Experimental tab shows.</summary>
-        public static int CurrentBodyMeshCount() => EnsureAvatar() && _avatar?.BodyMeshes != null ? _avatar.BodyMeshes.Length : 0;
+        public static int CurrentBodyMeshCount() => EnsureAvatar() ? AvatarDistortion.BodyMeshCount(_avatar) : 0;
 
         private static Dictionary<string, (Vector3 scale, bool hide)> ToDistortionEntries(Dictionary<string, BoneDistortionDraft> src)
         {
@@ -129,6 +134,8 @@ namespace Personify.Editor
             RestoreRig();
             _avatar = null;
             _menuBaseline = null;
+            _menuSnapshot = null;
+            _baselineLocked = false;
             _customLayers.Clear();
             foreach (var t in _ownedTextures) if (t != null) UnityEngine.Object.Destroy(t);
             _ownedTextures.Clear();
@@ -241,10 +248,10 @@ namespace Personify.Editor
             try
             {
                 Texture2D tex = TextureUtils.LoadTextureFromFile(absPngPath);
-                if (tex == null) return null;
+                if (tex == null) { Core.Log?.Warning("[preview] custom layer: could not read " + absPngPath); return null; }
                 _ownedTextures.Add(tex);
-                bool ok = AvatarLayerFactory.CreateAndRegisterAvatarLayer(SourceLayer(face), target, "Personify " + seg, tex);
-                if (!ok) return null;
+                bool ok = AvatarLook.RegisterCustomLayer(SourceLayer(face), target, "Personify " + seg, tex);
+                if (!ok) { Core.Log?.Warning("[preview] custom layer: registering " + absPngPath + " failed."); return null; }
                 _customLayers[target] = target;
                 return target;
             }
@@ -262,13 +269,23 @@ namespace Personify.Editor
 
         // ---- baseline capture ----------------------------------------------------------------------------------
 
+        // The menu character gets its look only once the save info has loaded, so an early call finds nothing and a
+        // later one tries again - but never after the first apply, when the avatar shows a draft instead.
+        private static void TryCaptureBaseline()
+        {
+            if (_baselineLocked || _avatar == null) return;
+            if (_menuSnapshot == null) _menuSnapshot = AvatarLook.Capture(_avatar);
+            if (_menuBaseline == null) _menuBaseline = CaptureBaseline();
+        }
+
         private static AppearanceDraft CaptureBaseline()
         {
             var d = new AppearanceDraft();
+            AvatarSettings cur = null;
             try
             {
-                var cur = _avatar.CurrentSettings;
-                if (cur == null) return d;
+                cur = AvatarLook.CaptureSettings(_avatar);
+                if (cur == null) return null;
                 d.Gender = cur.Gender; d.Height = cur.Height; d.Weight = cur.Weight;
                 d.SkinColor = HexOf(cur.SkinColor);
                 d.HairPath = cur.HairPath ?? "";
@@ -285,6 +302,8 @@ namespace Personify.Editor
                 CopyAccessories(cur.AccessorySettings, d.Accessories);
             }
             catch (Exception e) { Core.Log?.Warning("[preview] baseline capture: " + e.Message); }
+            finally { if (cur != null) UnityEngine.Object.Destroy(cur); }
+            Core.Log?.Msg($"[preview] menu look captured: {d.FaceLayers.Count} face, {d.BodyLayers.Count} body, {d.Accessories.Count} worn, hair '{d.HairPath}'.");
             return d;
         }
 
@@ -388,7 +407,7 @@ namespace Personify.Editor
                 }
                 if (_menuCam != null && _camCaptured) _menuCam.transform.position = _origCamPos;
             }
-            catch { }
+            catch (Exception e) { Core.Log?.Warning("[preview] restoring the rig failed: " + e.Message); }
             _pivot = null; _origParent = null; _menuCam = null; _camCaptured = false; _baseDist = 0f; _zoomPercent = 100;
         }
 

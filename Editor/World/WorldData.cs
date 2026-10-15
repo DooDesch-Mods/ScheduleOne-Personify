@@ -38,6 +38,18 @@ namespace Personify.Editor.World
         }
     }
 
+    /// <summary>A car the game can spawn by code.</summary>
+    public sealed class VehicleType
+    {
+        [JsonProperty("code")] public string Code { get; set; } = "";
+        [JsonProperty("name")] public string Name { get; set; } = "";
+
+        /// <summary>The name for a picker. The police variants carry the same name as the plain cars.</summary>
+        [JsonIgnore] public string Label =>
+            Code.IndexOf("police", StringComparison.OrdinalIgnoreCase) >= 0 && Name.IndexOf("police", StringComparison.OrdinalIgnoreCase) < 0
+                ? Name + " (police)" : Name;
+    }
+
     /// <summary>
     /// What the schedule map knows about the town: the map picture, how world positions land on it, the named places,
     /// and the walkable ground. The menu scene has none of this, so it is read out of a loaded save once
@@ -45,7 +57,8 @@ namespace Personify.Editor.World
     /// </summary>
     public sealed class WorldData
     {
-        public const int FormatVersion = 1;
+        // 2: vehicles. An older file loads as missing, so the next save load captures again.
+        public const int FormatVersion = 2;
 
         [JsonProperty("format")] public int Format { get; set; } = FormatVersion;
         [JsonProperty("gameVersion")] public string GameVersion { get; set; } = "";
@@ -58,6 +71,9 @@ namespace Personify.Editor.World
         [JsonProperty("maxZ")] public float MaxZ { get; set; }
 
         [JsonProperty("places")] public List<Place> Places { get; set; } = new List<Place>();
+
+        /// <summary>Every car the game can spawn by code, for <c>driveToCarPark</c>'s <c>createVehicle</c>.</summary>
+        [JsonProperty("vehicles")] public List<VehicleType> Vehicles { get; set; } = new List<VehicleType>();
 
         /// <summary>Which region (Northtown, Westville, ...) each cell of a coarse grid over the map belongs to, as
         /// one byte per cell indexing <see cref="RegionNames"/>, base64. Feeds <c>spawn.region</c>.</summary>

@@ -652,6 +652,31 @@ namespace Personify.Editor
 
         private static bool MapMarkerOn(NpcDraft n) => !(n.Contact is JObject c) || (bool?)c["mapMarker"] != false;
 
+        // A Drive stop brings its own car, so the exported pack runs on Personnel alone: Personnel spawns it from
+        // createVehicle when the NPC loads. It waits at the car park nearest the start point, or at the start point.
+        private const string DefaultCar = "shitbox";
+        private const float CarParkReach = 80f;
+
+        private static void PlaceCars(NpcDraft n, WorldData w)
+        {
+            if (!(n?.Schedule is JArray steps)) return;
+            Vector3? home = SpawnPoint(n);
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if (!(steps[i] is JObject step) || ScheduleEdit.KindOf(step) != StepKind.Drive) continue;
+                string code = ScheduleEdit.CarCode(step);
+                if (code.Length == 0)
+                {
+                    if (w == null || w.Vehicles.Count == 0) continue;   // the form says to load a save
+                    code = w.Vehicles.Exists(v => v.Code == DefaultCar) ? DefaultCar : w.Vehicles[0].Code;
+                }
+                Vector3? at = null;
+                if (home.HasValue) at = w?.NearestPlace(home.Value, "parking", CarParkReach)?.Position ?? home.Value;
+                if (ScheduleEdit.SetCar(step, code, at))
+                    Core.Log?.Msg($"[world] '{n.Name}' stop {i + 1} car: '{code}' at {(at.HasValue ? $"{at.Value.x:0}/{at.Value.z:0}" : "no start point yet")}.");
+            }
+        }
+
         private static void SetMapMarker(NpcDraft n, bool on)
         {
             if (!(n.Contact is JObject c)) { c = new JObject(); n.Contact = c; }
@@ -664,6 +689,7 @@ namespace Personify.Editor
         private static void BuildWorldForm(NpcDraft n)
         {
             WorldData w = WorldData.Current;
+            PlaceCars(n, w);
 
             Components.SectionHeader(_formContent, "In town");
             Vector3? home = SpawnPoint(n);
@@ -816,9 +842,28 @@ namespace Personify.Editor
                     break;
                 }
                 case StepKind.Drive:
+                {
                     PlaceRow("Car park", "parking", ScheduleEdit.Text(step, "parkingLot"), v => step["parkingLot"] = v);
-                    Caption("The NPC needs a car of its own for this.");
+                    string code = ScheduleEdit.CarCode(step);
+                    if (w == null || w.Vehicles.Count == 0)
+                    {
+                        InfoRow("Car", code.Length > 0 ? code : "Load a save to list the cars", code.Length == 0);
+                        break;
+                    }
+                    var cars = new List<PathOption>();
+                    string shown = code;
+                    foreach (VehicleType v in w.Vehicles)
+                    {
+                        cars.Add(new PathOption("Car", v.Label, v.Code));
+                        if (string.Equals(v.Code, code, StringComparison.OrdinalIgnoreCase)) shown = v.Label;
+                    }
+                    ChoiceRow("Car", shown, "Choose a car", cars, code, v =>
+                    {
+                        ScheduleEdit.SetCarCode(step, v);
+                        Core.Log?.Msg($"[world] '{n.Name}' stop {_worldSel + 1} drives a '{v}'.");
+                    });
                     break;
+                }
                 case StepKind.Atm:
                 case StepKind.Vending:
                     Caption("Uses the nearest one.");

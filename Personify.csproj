@@ -146,6 +146,10 @@
       <HintPath>$(GameManagedPath)/Il2CppScheduleOne.Core.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Il2CppFishNet.Runtime">
+      <HintPath>$(GameManagedPath)/Il2CppFishNet.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="S1API.Il2Cpp.MelonLoader">
       <HintPath>$(WorkspaceLibPath)/il2cpp/s1api/S1API.Il2Cpp.MelonLoader.dll</HintPath>
       <Private>false</Private>

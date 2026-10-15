@@ -17,7 +17,8 @@ namespace Personify.Editor
     //   gender m|f     -> drive the gender toggle the way the Gender row does, then dump
     //   tab <name>     -> switch to character | advanced | experimental | world
     //   world click <x> <z>      -> click the World map at that world position, the way a mouse click does
-    //   world choose <n>         -> pick entry n (1-based) of the open place menu
+    //   world choose <n|word>    -> pick entry n (1-based) of the open place menu, or the first starting with word
+    //   export         -> save and export the open pack (installs it into Personnel when Personnel is loaded)
     //   world pin <i|spawn>      -> click a pin; world drag <i|spawn> <x> <z> -> drag it there and let go
     //   world hover <x> <z>      -> show the hover ring the mouse would show there
     //   world undo               -> press Undo
@@ -74,6 +75,12 @@ namespace Personify.Editor
             else if (cmd == "packs") { ProjectStore.Save(_project); ShowProjectSelect(); Core.Log?.Msg("[selftest] back at pack select"); }
             else if (cmd.StartsWith("open ", StringComparison.Ordinal)) SelfTestOpen(cmd.Substring(5).Trim());
             else if (cmd.StartsWith("newpack ", StringComparison.Ordinal)) SelfTestNewPack(cmd.Substring(8).Trim());
+            else if (cmd == "export")
+            {
+                ProjectStore.Save(_project);
+                var r = Exporter.Export(_project);
+                Core.Log?.Msg($"[selftest] export ok={r.Ok}: {r.Message} (installed to {r.InstalledDir ?? "nowhere"})");
+            }
             else Core.Log?.Warning("[selftest] unknown command: " + cmd);
         }
 
@@ -245,7 +252,9 @@ namespace Personify.Editor
                     break;
                 case "choose":
                 {
-                    int i = int.Parse(p[1], ci) - 1;
+                    // A number picks by position, a word picks the first entry starting with it ("drive").
+                    int i = int.TryParse(p[1], System.Globalization.NumberStyles.Integer, ci, out int num) ? num - 1
+                        : _menuEntries.FindIndex(m => m.Label.StartsWith(p[1], StringComparison.OrdinalIgnoreCase));
                     if (i < 0 || i >= _menuEntries.Count) { Core.Log?.Warning($"[selftest] world: no menu entry {p[1]} ({_menuEntries.Count} open)"); return; }
                     Core.Log?.Msg("[selftest] world: choosing '" + _menuEntries[i].Label + "'");
                     _menuEntries[i].Do();

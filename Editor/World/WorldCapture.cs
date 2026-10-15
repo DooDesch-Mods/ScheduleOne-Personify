@@ -11,6 +11,7 @@ using MapApp = Il2CppScheduleOne.UI.Phone.Map.MapApp;
 using MapPositionUtility = Il2CppScheduleOne.Map.MapPositionUtility;
 using NPCEnterableBuilding = Il2CppScheduleOne.Map.NPCEnterableBuilding;
 using ParkingLot = Il2CppScheduleOne.Map.ParkingLot;
+using VehicleManager = Il2CppScheduleOne.Vehicles.VehicleManager;
 
 namespace Personify.Editor.World
 {
@@ -70,6 +71,7 @@ namespace Personify.Editor.World
                 png = ReadMapPicture();
                 ReadPlaces(w);
                 ReadRegions(w);
+                ReadVehicles(w);
             }
             catch (Exception e)
             {
@@ -176,6 +178,22 @@ namespace Personify.Editor.World
 
             w.Places.Sort((a, b) => string.Compare(a.Kind + a.Name, b.Kind + b.Name, StringComparison.OrdinalIgnoreCase));
             Core.Log?.Msg($"[world] places: {buildings} buildings, {lots} car parks, {seats} seat sets.");
+        }
+
+        // The prefab list the game spawns cars from (VehicleManager.SpawnVehicle looks codes up there).
+        private static void ReadVehicles(WorldData w)
+        {
+            if (!NetworkSingleton<VehicleManager>.InstanceExists) { Core.Log?.Warning("[world] the vehicle manager is missing - Drive stops get no car list."); return; }
+            var prefabs = NetworkSingleton<VehicleManager>.Instance.VehiclePrefabs;
+            if (prefabs == null) { Core.Log?.Warning("[world] the vehicle manager has no prefab list - Drive stops get no car list."); return; }
+            for (int i = 0; i < prefabs.Count; i++)
+            {
+                var v = prefabs[i];
+                if (v == null || string.IsNullOrWhiteSpace(v.VehicleCode)) continue;
+                w.Vehicles.Add(new VehicleType { Code = v.VehicleCode, Name = string.IsNullOrWhiteSpace(v.VehicleName) ? v.VehicleCode : v.VehicleName });
+            }
+            w.Vehicles.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            Core.Log?.Msg($"[world] vehicles: {string.Join(", ", w.Vehicles.ConvertAll(v => v.Code + " '" + v.Name + "'"))}.");
         }
 
         private const float RegionCell = 8f;

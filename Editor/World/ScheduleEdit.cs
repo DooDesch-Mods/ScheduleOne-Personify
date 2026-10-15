@@ -220,6 +220,28 @@ namespace Personify.Editor.World
             return place ?? $"{preposition} {p.Value.x:0}, {p.Value.z:0}";
         }
 
+        public static string CarCode(JObject step) => (string)(step?["createVehicle"] as JObject)?["code"] ?? "";
+
+        public static void SetCarCode(JObject step, string code)
+        {
+            if (!(step["createVehicle"] is JObject car)) { car = new JObject(); step["createVehicle"] = car; }
+            car["code"] = code;
+        }
+
+        /// <summary>Writes <c>createVehicle</c>; returns whether anything changed.</summary>
+        public static bool SetCar(JObject step, string code, Vector3? at)
+        {
+            var car = new JObject { ["code"] = code };
+            if (at.HasValue)
+            {
+                car["position"] = new JArray(Round(at.Value.x), Round(at.Value.y), Round(at.Value.z));
+                car["rotationY"] = 0;
+            }
+            if (JToken.DeepEquals(step["createVehicle"], car)) return false;
+            step["createVehicle"] = car;
+            return true;
+        }
+
         public static string FormatDuration(int minutes) =>
             minutes < 60 ? minutes + " min" : minutes % 60 == 0 ? (minutes / 60) + " h" : (minutes / 60) + " h " + (minutes % 60) + " min";
 

@@ -3,6 +3,24 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-10-15
+
+### Added
+
+- New World tab: click the town map to set where an NPC starts the day and where it goes.
+- Drag pins to move stops, undo mistakes, and see the whole day on a 24 h strip.
+- Drive stops bring their own car, so exported NPCs drive with only Personnel installed. Pick it under "Car".
+- Duplicate copies an NPC with its look and day plan.
+
+### Fixed
+
+- NPCs made with Personify are visible again on game 0.4.7.
+- Pickers hide avatar parts the game no longer has.
+
+### Changed
+
+- Needs S1API 3.2.1, up from 3.1.1. Update it along with the mod.
+
 ## [1.3.0] - 2026-08-13
 
 ### Added

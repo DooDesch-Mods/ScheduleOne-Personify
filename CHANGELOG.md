@@ -3,6 +3,14 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-10-28
+
+### Added
+
+- Customers can start locked: set Unlock to "With a sample" and pick their contacts. Once you know a contact,
+  a free sample opens them, like vanilla customers.
+- The contact picker lists every NPC in town by area. Load a save once after updating so the list fills.
+
 ## [1.4.0] - 2026-10-15
 
 ### Added

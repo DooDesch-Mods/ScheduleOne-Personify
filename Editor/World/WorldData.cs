@@ -50,6 +50,14 @@ namespace Personify.Editor.World
                 ? Name + " (police)" : Name;
     }
 
+    /// <summary>A town NPC a customer can be connected to, so unlocking that NPC makes the customer reachable.</summary>
+    public sealed class NpcEntry
+    {
+        [JsonProperty("id")] public string Id { get; set; } = "";
+        [JsonProperty("name")] public string Name { get; set; } = "";
+        [JsonProperty("region", NullValueHandling = NullValueHandling.Ignore)] public string Region { get; set; }
+    }
+
     /// <summary>
     /// What the schedule map knows about the town: the map picture, how world positions land on it, the named places,
     /// and the walkable ground. The menu scene has none of this, so it is read out of a loaded save once
@@ -57,8 +65,8 @@ namespace Personify.Editor.World
     /// </summary>
     public sealed class WorldData
     {
-        // 2: vehicles. An older file loads as missing, so the next save load captures again.
-        public const int FormatVersion = 2;
+        // 2: vehicles. 3: npcs. An older file loads as missing, so the next save load captures again.
+        public const int FormatVersion = 3;
 
         [JsonProperty("format")] public int Format { get; set; } = FormatVersion;
         [JsonProperty("gameVersion")] public string GameVersion { get; set; } = "";
@@ -74,6 +82,9 @@ namespace Personify.Editor.World
 
         /// <summary>Every car the game can spawn by code, for <c>driveToCarPark</c>'s <c>createVehicle</c>.</summary>
         [JsonProperty("vehicles")] public List<VehicleType> Vehicles { get; set; } = new List<VehicleType>();
+
+        /// <summary>Every NPC in town, for a customer's <c>relationships.connections</c>.</summary>
+        [JsonProperty("npcs")] public List<NpcEntry> Npcs { get; set; } = new List<NpcEntry>();
 
         /// <summary>Which region (Northtown, Westville, ...) each cell of a coarse grid over the map belongs to, as
         /// one byte per cell indexing <see cref="RegionNames"/>, base64. Feeds <c>spawn.region</c>.</summary>
@@ -133,7 +144,7 @@ namespace Personify.Editor.World
                 }
                 else Core.Log?.Warning("[world] map.png is missing - the map shows without its picture.");
                 w.Ground = NavGround.Load(NavFile);
-                Core.Log?.Msg($"[world] loaded: game {w.GameVersion}, {w.Places.Count} places, map {(w.Map != null ? w.Map.width + "x" + w.Map.height : "none")}, ground {(w.Ground != null ? w.Ground.WalkableCells + " walkable cells" : "none")}.");
+                Core.Log?.Msg($"[world] loaded: game {w.GameVersion}, {w.Places.Count} places, {w.Npcs.Count} npcs, map {(w.Map != null ? w.Map.width + "x" + w.Map.height : "none")}, ground {(w.Ground != null ? w.Ground.WalkableCells + " walkable cells" : "none")}.");
                 return w;
             }
             catch (Exception e)

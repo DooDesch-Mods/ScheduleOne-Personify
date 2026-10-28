@@ -32,6 +32,10 @@ namespace Personify.Editor
     //   packs          -> save and go back to the pack-select screen
     //   open <folder>  -> load that pack folder the way clicking its row does
     //   newpack <name> -> create a pack seeded from the menu character and open it
+    //   customer on    -> enable behaviour and set the conversation to Customer, the way the two rows do
+    //   customer start|sample -> pick that segment of the Unlock row
+    //   customer add   -> click "+ Add contact" (the picker stays open for "pick <name>")
+    //   customer dump  -> log the relationships block the export will write
     //   resolve        -> resolve every catalog path against the game's avatar object library and log the misses
     //   dump           -> log the AvatarSettings the selected NPC actually builds (colours + layer order),
     //                     which is the only way to check the derived values without a mouse
@@ -66,6 +70,7 @@ namespace Personify.Editor
             else if (cmd.StartsWith("skin ", StringComparison.Ordinal)) SelfTestSkin(cmd.Substring(5).Trim());
             else if (cmd.StartsWith("gender ", StringComparison.Ordinal)) SelfTestGender(cmd.Substring(7).Trim());
             else if (cmd == "dump") SelfTestDump();
+            else if (cmd.StartsWith("customer ", StringComparison.Ordinal)) SelfTestCustomer(cmd.Substring(9).Trim());
             else if (cmd == "resolve") SelfTestResolve();
             else if (cmd.StartsWith("world ", StringComparison.Ordinal)) SelfTestWorld(cmd.Substring(6).Trim());
             else if (cmd.StartsWith("tab ", StringComparison.Ordinal)) SelfTestTab(cmd.Substring(4).Trim());
@@ -153,6 +158,42 @@ namespace Personify.Editor
             catch (Exception e) { Core.Log?.Error("[selftest] pick threw: " + e); }
         }
 
+        private static void SelfTestCustomer(string arg)
+        {
+            NpcDraft n = _selected;
+            if (n == null) { Core.Log?.Warning("[selftest] customer: no NPC selected"); return; }
+            switch (arg)
+            {
+                case "on":
+                    n.Behavior.Enabled = true;
+                    n.Behavior.Conversation = "customer";
+                    RefreshForm(); MarkDirty();
+                    break;
+                case "start":
+                case "sample":
+                    // The Unlock row's own callback body.
+                    WriteCustomerUnlock(n, arg == "sample", ConnectionIds(n.Relationships as Newtonsoft.Json.Linq.JObject));
+                    RefreshForm(); MarkDirty();
+                    break;
+                case "add":
+                {
+                    Button add = SelfTestFindButton(_formContent, "addcon");
+                    if (add == null) { Core.Log?.Warning("[selftest] customer: no '+ Add contact' button in the form"); return; }
+                    add.onClick.Invoke();
+                    Core.Log?.Msg("[selftest] customer: contact picker opened");
+                    return;
+                }
+                case "dump":
+                    break;
+                default:
+                    Core.Log?.Warning("[selftest] customer: unknown command '" + arg + "'");
+                    return;
+            }
+            string rel = n.Relationships == null ? "(none)" : n.Relationships.ToString(Newtonsoft.Json.Formatting.None);
+            Core.Log?.Msg($"[selftest] customer '{n.Name}': behaviour={n.Behavior.Enabled} conversation={n.Behavior.Conversation} " +
+                          $"addButton={(SelfTestFindButton(_formContent, "addcon") != null)} relationships={rel}");
+        }
+
         private static void SelfTestSkin(string hex)
         {
             var a = _selected?.Appearance;
@@ -174,6 +215,11 @@ namespace Personify.Editor
         // Exactly what clicking a pack row does, so the load path can be exercised without a mouse.
         private static void SelfTestOpen(string folder)
         {
+            if (!IsOpen)
+            {
+                Core.Log?.Msg("[selftest] editor was closed, opening it first");
+                Open(new LaunchContext());
+            }
             OpenProject(folder);
             Core.Log?.Msg($"[selftest] opened '{folder}': project={(_project == null ? "null" : _project.Name)} " +
                           $"npcs={_project?.Npcs.Count ?? -1} selected={_selected?.Name ?? "null"}");

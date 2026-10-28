@@ -464,7 +464,9 @@ namespace Personify.Editor
                 SliderRow("Aggression", 0f, 1f, n.Behavior.Aggression, v => n.Behavior.Aggression = v);
                 SliderRow("Max health", 1f, 1000f, n.Behavior.MaxHealth, v => n.Behavior.MaxHealth = v);
                 SliderRow("Scale", 0.25f, 4f, n.Behavior.Scale, v => n.Behavior.Scale = v);
-                ConversationRow("Conversation", n.Behavior.Conversation, v => n.Behavior.Conversation = v);
+                ConversationRow("Conversation", n.Behavior.Conversation, v => { n.Behavior.Conversation = v; RefreshForm(); });
+                if (string.Equals(n.Behavior.Conversation, "customer", StringComparison.OrdinalIgnoreCase))
+                    CustomerUnlockSection(n);
             }
 
             BackroomsSection(n);   // gated on the Backrooms mod being installed
@@ -934,6 +936,110 @@ namespace Personify.Editor
             var row = Components.FormRow(_formContent, label, null, out Transform slot, stacked: false, height: 30);
             var segGO = Components.Segmented(slot, labels, idx, i => { set(values[i]); MarkDirty(); }, out _);
             StretchFill(segGO.GetComponent<RectTransform>());
+        }
+
+        // --- customer unlock ---
+
+        // Vanilla opens a locked customer only after the player knows one of its connections (Customer.IsUnlockable
+        // and the sample option both need an unlocked connection), so "With a sample" comes with that contact list.
+        // Written into relationships.unlocked / relationships.connections; other keys in the block are kept.
+        private static void CustomerUnlockSection(NpcDraft n)
+        {
+            var rel = n.Relationships as Newtonsoft.Json.Linq.JObject;
+            List<string> ids = ConnectionIds(rel);
+            var unlockedTok = rel?["unlocked"];
+            bool sample = unlockedTok != null && unlockedTok.Type == Newtonsoft.Json.Linq.JTokenType.Boolean
+                ? !(bool)unlockedTok
+                : ids.Count > 0;   // Personnel's own default when the key is absent
+
+            string[] labels = { "At start", "With a sample" };
+            Components.FormRow(_formContent, "Unlock", null, out Transform slot, stacked: false, height: 30);
+            var segGO = Components.Segmented(slot, labels, sample ? 1 : 0, i =>
+            {
+                WriteCustomerUnlock(n, i == 1, ids);
+                RefreshForm(); MarkDirty();
+            }, out _);
+            StretchFill(segGO.GetComponent<RectTransform>());
+            if (!sample) return;
+
+            World.WorldData w = World.WorldData.Current;
+            foreach (string id in ids) ContactRow(n, ids, id, w);
+
+            if (w == null || w.Npcs.Count == 0)
+            {
+                Caption("Load a save once to list the town's NPCs here.");
+                return;
+            }
+
+            var (addGO, addBtn, _) = UIFactory.ButtonWithLabel("addcon", "+ Add contact", _formContent, Theme.Accent, 0, 32);
+            addGO.AddComponent<LayoutElement>().minHeight = 32;
+            addBtn.onClick.AddListener((UnityAction)(() =>
+            {
+                var options = new List<PathOption>();
+                foreach (World.NpcEntry e in w.Npcs)
+                    if (!ids.Exists(x => string.Equals(x, e.Id, StringComparison.OrdinalIgnoreCase)))
+                        options.Add(new PathOption(string.IsNullOrEmpty(e.Region) ? "Other" : e.Region, e.Name, e.Id));
+                OptionPicker.Show(_canvasGO.transform, "Choose contact", options, null, allowNone: false, chosen =>
+                {
+                    if (string.IsNullOrEmpty(chosen)) return;
+                    ids.Add(chosen);
+                    WriteCustomerUnlock(n, true, ids);
+                    Core.Log?.Msg($"[editor] '{n.Name}': contact '{chosen}' added ({ids.Count} now).");
+                    RefreshForm(); MarkDirty();
+                });
+            }));
+
+            Caption(ids.Count == 0
+                ? "Without a contact this customer stays locked."
+                : "Opens once the player knows one of these contacts and hands over a free sample.");
+        }
+
+        private static List<string> ConnectionIds(Newtonsoft.Json.Linq.JObject rel)
+        {
+            var ids = new List<string>();
+            if (rel?["connections"] is Newtonsoft.Json.Linq.JArray arr)
+                foreach (var t in arr)
+                {
+                    string id = t.Type == Newtonsoft.Json.Linq.JTokenType.String ? (string)t : null;
+                    if (!string.IsNullOrWhiteSpace(id)) ids.Add(id);
+                }
+            return ids;
+        }
+
+        private static void WriteCustomerUnlock(NpcDraft n, bool sample, List<string> ids)
+        {
+            var rel = n.Relationships as Newtonsoft.Json.Linq.JObject ?? new Newtonsoft.Json.Linq.JObject();
+            rel["unlocked"] = !sample;
+            if (ids.Count > 0) rel["connections"] = new Newtonsoft.Json.Linq.JArray(ids.ToArray());
+            else rel.Remove("connections");
+            n.Relationships = rel;
+        }
+
+        // One chosen contact: its name (or the raw id when the capture does not know it) and a remove button.
+        private static void ContactRow(NpcDraft n, List<string> ids, string id, World.WorldData w)
+        {
+            World.NpcEntry known = w?.Npcs.Find(e => string.Equals(e.Id, id, StringComparison.OrdinalIgnoreCase));
+            var row = UIFactory.Panel("con", _formContent, Theme.BgElevated);
+            var rimg = row.GetComponent<Image>(); if (rimg != null) { rimg.sprite = Theme.RoundedSprite(); rimg.type = Image.Type.Sliced; }
+            row.AddComponent<LayoutElement>().minHeight = 36;
+
+            var t = UIFactory.Text("t", known != null ? known.Name : id, row.transform, Theme.Body, TextAnchor.MiddleLeft);
+            t.raycastTarget = false;
+            if (known == null) t.color = Theme.TextMuted;
+            var trt = t.rectTransform; trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = new Vector2(12, 0); trt.offsetMax = new Vector2(-38, 0);
+
+            var (rmGO, rmBtn, rmTxt) = UIFactory.ButtonWithLabel("rm", "✕", row.transform, Theme.Button, 26, 26);
+            if (rmTxt != null) rmTxt.fontSize = Theme.Body;
+            var rmrt = rmGO.GetComponent<RectTransform>();
+            rmrt.anchorMin = new Vector2(1, 0.5f); rmrt.anchorMax = new Vector2(1, 0.5f); rmrt.pivot = new Vector2(1, 0.5f);
+            rmrt.anchoredPosition = new Vector2(-8, 0); rmrt.sizeDelta = new Vector2(26, 26);
+            rmBtn.onClick.AddListener((UnityAction)(() =>
+            {
+                ids.RemoveAll(x => string.Equals(x, id, StringComparison.OrdinalIgnoreCase));
+                WriteCustomerUnlock(n, true, ids);
+                Core.Log?.Msg($"[editor] '{n.Name}': contact '{id}' removed ({ids.Count} left).");
+                RefreshForm(); MarkDirty();
+            }));
         }
 
         // A colour field row: a small clickable swatch chip + hex text inside a pill-shaped clickable background.

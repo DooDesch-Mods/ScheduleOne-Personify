@@ -8,6 +8,7 @@ using Il2CppScheduleOne.Persistence;
 using AvatarSeatSet = Il2CppScheduleOne.AvatarFramework.Animation.AvatarSeatSet;
 using GameMap = Il2CppScheduleOne.Map.Map;
 using MapApp = Il2CppScheduleOne.UI.Phone.Map.MapApp;
+using NPCManager = Il2CppScheduleOne.NPCs.NPCManager;
 using MapPositionUtility = Il2CppScheduleOne.Map.MapPositionUtility;
 using NPCEnterableBuilding = Il2CppScheduleOne.Map.NPCEnterableBuilding;
 using ParkingLot = Il2CppScheduleOne.Map.ParkingLot;
@@ -72,6 +73,7 @@ namespace Personify.Editor.World
                 ReadPlaces(w);
                 ReadRegions(w);
                 ReadVehicles(w);
+                ReadNpcs(w);
             }
             catch (Exception e)
             {
@@ -194,6 +196,23 @@ namespace Personify.Editor.World
             }
             w.Vehicles.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             Core.Log?.Msg($"[world] vehicles: {string.Join(", ", w.Vehicles.ConvertAll(v => v.Code + " '" + v.Name + "'"))}.");
+        }
+
+        // NPCManager registers every town NPC in Awake, custom NPCs included.
+        private static void ReadNpcs(WorldData w)
+        {
+            var reg = NPCManager.NPCRegistry;
+            if (reg == null) { Core.Log?.Warning("[world] the NPC registry is missing - customers get no contact list."); return; }
+            int skipped = 0;
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var n in reg)
+            {
+                if (n == null || string.IsNullOrWhiteSpace(n.ID) || !seen.Add(n.ID)) { skipped++; continue; }
+                string name = ((n.FirstName ?? "") + " " + (n.LastName ?? "")).Trim();
+                w.Npcs.Add(new NpcEntry { Id = n.ID, Name = name.Length > 0 ? name : n.ID, Region = n.Region.ToString() });
+            }
+            w.Npcs.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            Core.Log?.Msg($"[world] npcs: {w.Npcs.Count} listed, {skipped} skipped (empty or duplicate id).");
         }
 
         private const float RegionCell = 8f;

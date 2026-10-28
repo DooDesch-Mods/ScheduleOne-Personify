@@ -12,7 +12,7 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
-[![MLVScan Personify.dll](https://mlvscan.com/attestations/att_kZRd-b_ArzT91bfOzeZlapWI/badge.svg)](https://mlvscan.com/attestations/att_kZRd-b_ArzT91bfOzeZlapWI)
+[![MLVScan Personify.dll](https://mlvscan.com/attestations/att_fLiR7uW7ZLiUDFIGvDnrlh45/badge.svg)](https://mlvscan.com/attestations/att_fLiR7uW7ZLiUDFIGvDnrlh45)
 
 ![The World tab day plan next to the NPC driving through town](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/header.jpg)
 

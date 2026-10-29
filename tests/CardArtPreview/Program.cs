@@ -12,6 +12,8 @@ internal static class Program
         Directory.CreateDirectory(dir);
         Write(dir, "customer", new CardArtInput { Name = "Tick Ruiz", Role = "customer", Code = "k7m2qp", Creator = "DooDesch" }, 1.78f);
         Write(dir, "dealer-long", new CardArtInput { Name = "Mama Lou Fitzgerald-Okonkwo", Role = "dealer", Code = "a2b3c4", Creator = "SomeVeryLongCreatorName", BasedOn = "k7m2qp" }, 1.62f);
+        Write(dir, "customer-credit", new CardArtInput { Name = "Finn Murphy", Role = "customer", Code = "m3n4p5", Creator = "NPC Vault", OriginalBy = "FannsoNetti, More NPCs" }, 1.76f);
+        Write(dir, "remix-credit", new CardArtInput { Name = "Finn Murphy", Role = "customer", Code = "q7r8s9", Creator = "DooDesch", BasedOn = "m3n4p5", OriginalBy = "FannsoNetti, More NPCs" }, 1.76f);
         Write(dir, "supplier-umlaut", new CardArtInput { Name = "Jürgen Weiß", Role = "supplier", Code = "zz9yx8" }, 1.95f);
         return 0;
     }

@@ -17,6 +17,8 @@ namespace Personify.Cards
         public string Creator;
         /// <summary>Code of the card this one remixes, or null.</summary>
         public string BasedOn;
+        /// <summary>Author (and source mod) of the NPC this card was converted from, or null.</summary>
+        public string OriginalBy;
         /// <summary>Full-body render filling the height chart (<see cref="CardArt.ChartWidth"/> x <see cref="CardArt.ChartHeight"/>,
         /// <see cref="CardArt.ChartMeters"/> tall, feet on the bottom row), transparent around the NPC. Null draws no body.</summary>
         public byte[] Body;
@@ -86,8 +88,11 @@ namespace Personify.Cards
             string role = (a.Role ?? "townsfolk").ToUpperInvariant();
             string line2 = string.IsNullOrWhiteSpace(a.Creator) ? role : role + "  ·  BY " + a.Creator.ToUpperInvariant();
             label.Draw(c, Fit(label, line2, textRight - textX, 0.8f, 2), textX, py + 128, Muted, 0.8f, 2);
-            if (!string.IsNullOrWhiteSpace(a.BasedOn))
-                small.Draw(c, "Remix of " + a.BasedOn.ToUpperInvariant(), textX, py + 154, Muted, 0.8f);
+            string line3 = string.IsNullOrWhiteSpace(a.BasedOn) ? null : "Remix of " + a.BasedOn.ToUpperInvariant();
+            if (!string.IsNullOrWhiteSpace(a.OriginalBy))
+                line3 = line3 == null ? "Original by " + a.OriginalBy : line3 + ", original by " + a.OriginalBy;
+            if (line3 != null)
+                small.Draw(c, Fit(small, line3, textRight - textX, 0.8f, 0), textX, py + 154, Muted, 0.8f);
 
             // Address under the placard: where the card lives if its data is ever lost.
             small.Draw(c, "personify.doomods.com/c/" + (a.Code ?? ""), ChartX, 1238, Vinyl, 1f);

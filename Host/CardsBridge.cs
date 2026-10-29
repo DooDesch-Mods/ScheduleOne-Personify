@@ -143,6 +143,7 @@ namespace Personify.Host
             var remix = npc[PackProject.EditorKey]?["remixOf"] as JObject;
             string basedOn = remix != null && (string)remix["contentHash"] != contentHash ? (string)remix["code"] : null;
             string creator = Creator(p);
+            JObject credit = Credit(p, npc);
             var meta = new JObject
             {
                 ["cardId"] = code,
@@ -151,12 +152,14 @@ namespace Personify.Host
                 ["editor"] = "Personify " + DooDesch.ModVersion.Current,
                 ["basedOn"] = basedOn == null ? null : new JObject { ["code"] = basedOn, ["name"] = (string)remix["name"] },
             };
+            if (credit != null) meta["credit"] = credit;
 
             string name = (string)entry["name"] ?? id;
             string role = RoleOf(entry);
             byte[] art = CardArt.Compose(new CardArtInput
             {
                 Name = name, Role = role, Code = code, Creator = creator, BasedOn = basedOn,
+                OriginalBy = credit == null ? null : CreditLine(credit),
                 Body = body, Head = head, HeadSize = head == null ? 0 : HeadSize,
             });
             byte[] png = (byte[])Invoke("WriteCard", art, npcJson, meta.ToString(Formatting.None), portrait, layers);
@@ -236,6 +239,33 @@ namespace Personify.Host
             if (npc["supplier"] is JObject) return "supplier";
             if (npc["customer"] is JObject) return "customer";
             return "townsfolk";
+        }
+
+        /// <summary>
+        /// Who made the NPC this card is based on, for NPCs converted from another mod: <c>{ author, source, url, license }</c>
+        /// from the NPC's editor block, else from the project's. Null when there is none or it has no author.
+        /// </summary>
+        private static JObject Credit(PackProject p, JObject npc)
+        {
+            var credit = (npc[PackProject.EditorKey]?["credit"] as JObject) ?? (p.Editor["credit"] as JObject);
+            if (credit == null) return null;
+            string author = ((string)credit["author"] ?? "").Trim();
+            if (author.Length == 0)
+            {
+                Core.Log.Warning($"[cards] '{(string)npc["id"]}': the credit block has no author; the card carries no credit.");
+                return null;
+            }
+            var clean = new JObject { ["author"] = author };
+            foreach (string key in new[] { "source", "url", "license" })
+                if (((string)credit[key] ?? "").Trim() is string v && v.Length > 0) clean[key] = v;
+            return clean;
+        }
+
+        /// <summary>"FannsoNetti, More NPCs": the author, then the source mod if there is one.</summary>
+        private static string CreditLine(JObject credit)
+        {
+            string source = (string)credit["source"];
+            return string.IsNullOrEmpty(source) ? (string)credit["author"] : (string)credit["author"] + ", " + source;
         }
 
         private static string Creator(PackProject p)
@@ -498,6 +528,8 @@ namespace Personify.Host
 
             var block = PackProject.EditorBlock(npc);
             block["remixOf"] = new JObject { ["code"] = (string)meta?["cardId"], ["contentHash"] = (string)card["contentHash"], ["name"] = name };
+            // A remix keeps crediting whoever made the original NPC.
+            if (meta?["credit"] is JObject credit) block["credit"] = credit.DeepClone();
             ((JArray)p.Manifest["npcs"]).Add(npc);
             if (!ProjectFiles.Save(p, snapshot: false)) return Calls.Fail("create_failed");
             Core.Log.Msg($"[cards] remix of card {(string)meta?["cardId"]} ('{name}') started as project '{p.Folder}'.");

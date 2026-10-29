@@ -1170,7 +1170,13 @@ function connectDialog(then) {
   connectBox.appendChild(el('div', 'dsub', t('Asking the NPC Vault for a code...')));
   box.appendChild(connectBox);
   const r = call('vault.connect');
-  if (!r || r.ok === false) { connectBox.replaceChildren(el('div', 'ferr', errText(r && r.error))); connectBox = null; }
+  if (!r || r.ok === false) {
+    console.warn('[personify] vault connect refused: ' + ((r && r.error) || 'no answer'));
+    // Sideload's replaceChildren drops its arguments, so clear first and append.
+    connectBox.replaceChildren();
+    connectBox.appendChild(el('div', 'ferr', errText(r && r.error)));
+    connectBox = null;
+  }
 }
 
 function showConnect(s) {
@@ -1248,10 +1254,12 @@ host.on('vault.thumb', p => {
   if (!x || !x.url) return;
   cards.thumbs[x.code] = x.url;
   const pic = cards.pics[x.code];
-  if (!pic || !document.body.contains(pic)) return;
+  if (!pic || !document.body.contains(pic)) { console.log('[personify] vault thumb ' + x.code + ' arrived after its tile left the page'); return; }
   const i = el('img');
   i.setAttribute('src', x.url);
-  pic.replaceChildren(i);
+  // Sideload's replaceChildren drops its arguments, so clear first and append.
+  pic.replaceChildren();
+  pic.appendChild(i);
 });
 host.on('vault.connect', p => {
   const x = parsePayload(p, 'vault.connect');

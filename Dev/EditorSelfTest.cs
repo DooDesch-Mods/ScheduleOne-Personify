@@ -35,7 +35,11 @@ namespace Personify.Editor
     //   customer on    -> enable behaviour and set the conversation to Customer, the way the two rows do
     //   customer start|sample -> pick that segment of the Unlock row
     //   customer add   -> click "+ Add contact" (the picker stays open for "pick <name>")
-    //   customer dump  -> log the relationships block the export will write
+    //   customer effect -> click "+ Add effect" (the picker stays open for "pick <name>")
+    //   customer dump  -> log the relationships and customer blocks the export will write
+    //   row <label> <value> -> drive the last form row with that label through its own control: a slider takes a
+    //                     number, a switch on|off, a segmented row a segment label, a stepper + or -, a picker row
+    //                     opens its picker (then "pick <name>")
     //   resolve        -> resolve every catalog path against the game's avatar object library and log the misses
     //   dump           -> log the AvatarSettings the selected NPC actually builds (colours + layer order),
     //                     which is the only way to check the derived values without a mouse
@@ -71,6 +75,7 @@ namespace Personify.Editor
             else if (cmd.StartsWith("gender ", StringComparison.Ordinal)) SelfTestGender(cmd.Substring(7).Trim());
             else if (cmd == "dump") SelfTestDump();
             else if (cmd.StartsWith("customer ", StringComparison.Ordinal)) SelfTestCustomer(cmd.Substring(9).Trim());
+            else if (cmd.StartsWith("row ", StringComparison.Ordinal)) SelfTestRow(cmd.Substring(4).Trim());
             else if (cmd == "resolve") SelfTestResolve();
             else if (cmd.StartsWith("world ", StringComparison.Ordinal)) SelfTestWorld(cmd.Substring(6).Trim());
             else if (cmd.StartsWith("tab ", StringComparison.Ordinal)) SelfTestTab(cmd.Substring(4).Trim());
@@ -183,6 +188,14 @@ namespace Personify.Editor
                     Core.Log?.Msg("[selftest] customer: contact picker opened");
                     return;
                 }
+                case "effect":
+                {
+                    Button add = SelfTestFindButton(_formContent, "addeff");
+                    if (add == null) { Core.Log?.Warning("[selftest] customer: no '+ Add effect' button in the form"); return; }
+                    add.onClick.Invoke();
+                    Core.Log?.Msg("[selftest] customer: effect picker opened");
+                    return;
+                }
                 case "dump":
                     break;
                 default:
@@ -190,8 +203,62 @@ namespace Personify.Editor
                     return;
             }
             string rel = n.Relationships == null ? "(none)" : n.Relationships.ToString(Newtonsoft.Json.Formatting.None);
+            string cust = n.Customer == null ? "(none)" : n.Customer.ToString(Newtonsoft.Json.Formatting.None);
             Core.Log?.Msg($"[selftest] customer '{n.Name}': behaviour={n.Behavior.Enabled} conversation={n.Behavior.Conversation} " +
-                          $"addButton={(SelfTestFindButton(_formContent, "addcon") != null)} relationships={rel}");
+                          $"addButton={(SelfTestFindButton(_formContent, "addcon") != null)} relationships={rel} customer={cust}");
+        }
+
+        // Label and value are split at the last space, so labels with spaces ("Orders/week min") work.
+        private static void SelfTestRow(string arg)
+        {
+            int cut = arg.LastIndexOf(' ');
+            if (cut <= 0) { Core.Log?.Warning("[selftest] row: expected '<label> <value>'"); return; }
+            string label = arg.Substring(0, cut).Trim(), value = arg.Substring(cut + 1).Trim();
+            if (_formContent == null) { Core.Log?.Warning("[selftest] row: no form"); return; }
+
+            Transform row = null;
+            for (int i = 0; i < _formContent.childCount; i++)
+            {
+                Transform child = _formContent.GetChild(i);
+                foreach (Text t in child.GetComponentsInChildren<Text>(true))
+                    if (string.Equals(t.text, label, StringComparison.Ordinal)) { row = child; break; }
+            }
+            if (row == null) { Core.Log?.Warning($"[selftest] row: no row labelled '{label}'"); return; }
+
+            try
+            {
+                Slider slider = row.GetComponentInChildren<Slider>(true);
+                if (slider != null)
+                {
+                    if (!float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float v))
+                    { Core.Log?.Warning($"[selftest] row '{label}': '{value}' is not a number"); return; }
+                    slider.value = v;
+                    Core.Log?.Msg($"[selftest] row '{label}': slider set to {slider.value:0.##}");
+                    return;
+                }
+                Toggle toggle = row.GetComponentInChildren<Toggle>(true);
+                if (toggle != null)
+                {
+                    toggle.isOn = value.StartsWith("on", StringComparison.OrdinalIgnoreCase);
+                    Core.Log?.Msg($"[selftest] row '{label}': switch {(toggle.isOn ? "on" : "off")}");
+                    return;
+                }
+                foreach (Button b in row.GetComponentsInChildren<Button>(true))
+                {
+                    string name = b.gameObject.name;
+                    Text bt = b.GetComponentInChildren<Text>(true);
+                    bool segment = name.StartsWith("seg_", StringComparison.Ordinal) && bt != null && string.Equals(bt.text, value, StringComparison.OrdinalIgnoreCase);
+                    bool step = (name == "plus" && value == "+") || (name == "minus" && value == "-");
+                    bool picker = name == "choice" || name == "pick";
+                    if (!segment && !step && !picker) continue;
+                    if (!b.interactable) { Core.Log?.Warning($"[selftest] row '{label}': '{name}' is disabled"); return; }
+                    b.onClick.Invoke();
+                    Core.Log?.Msg($"[selftest] row '{label}': clicked '{name}'{(segment ? " (" + bt.text + ")" : "")}");
+                    return;
+                }
+                Core.Log?.Warning($"[selftest] row '{label}': no control matches '{value}'");
+            }
+            catch (Exception e) { Core.Log?.Error($"[selftest] row '{label}' threw: {e}"); }
         }
 
         private static void SelfTestSkin(string hex)

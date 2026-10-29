@@ -466,7 +466,10 @@ namespace Personify.Editor
                 SliderRow("Scale", 0.25f, 4f, n.Behavior.Scale, v => n.Behavior.Scale = v);
                 ConversationRow("Conversation", n.Behavior.Conversation, v => { n.Behavior.Conversation = v; RefreshForm(); });
                 if (string.Equals(n.Behavior.Conversation, "customer", StringComparison.OrdinalIgnoreCase))
+                {
                     CustomerUnlockSection(n);
+                    CustomerFieldsSection(n);
+                }
             }
 
             BackroomsSection(n);   // gated on the Backrooms mod being installed
@@ -797,7 +800,7 @@ namespace Personify.Editor
         private const float SliderLabelW = 84f;
         private const float SliderValueW = 38f;
 
-        private static void SliderRow(string label, float min, float max, float value, Action<float> set, bool whole = false)
+        private static void SliderRow(string label, float min, float max, float value, Action<float> set, bool whole = false, Func<float, string> format = null)
         {
             // The Experimental tab writes the same fields on much wider rails, and a project can be hand-edited to
             // anything. Widen the row to fit what it was handed instead of pinning the handle at an end - a slider
@@ -815,14 +818,14 @@ namespace Personify.Editor
             lbl.color = Theme.TextPrimary; lbl.raycastTarget = false; lbl.horizontalOverflow = HorizontalWrapMode.Overflow;
             var lle = lbl.gameObject.AddComponent<LayoutElement>(); lle.minWidth = SliderLabelW; lle.preferredWidth = SliderLabelW; lle.flexibleWidth = 0;
 
-            var valText = UIFactory.Text("v", Fmt(value, whole), row.transform, Theme.Caption, TextAnchor.MiddleRight);
+            var valText = UIFactory.Text("v", format != null ? format(value) : Fmt(value, whole), row.transform, Theme.Caption, TextAnchor.MiddleRight);
             valText.color = Theme.TextMuted; valText.raycastTarget = false;
             var vle = valText.gameObject.AddComponent<LayoutElement>(); vle.minWidth = SliderValueW; vle.preferredWidth = SliderValueW; vle.flexibleWidth = 0;
 
             var slider = SliderStyle.Compact(Components.Slider(row.transform, min, max, value, v =>
             {
                 set(v);
-                valText.text = Fmt(v, whole);
+                valText.text = format != null ? format(v) : Fmt(v, whole);
                 MarkDirty();
             }));
             slider.transform.SetSiblingIndex(1);   // order: label | slider | value

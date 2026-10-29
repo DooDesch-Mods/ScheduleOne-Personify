@@ -303,6 +303,25 @@ namespace Personify.Host
         }
 
         /// <summary>
+        /// Stops a running blink and puts every eye on the NPC's own resting lids. The game blinks the preview character
+        /// every few seconds, and a frame taken mid-blink shows the NPC with its eyes shut. The render runs in the same
+        /// frame, so the next blink cannot start before it.
+        /// </summary>
+        private static void RestEyes(Transform root, string id, string what)
+        {
+            var eyes = root.GetComponentsInChildren<Il2CppScheduleOne.AvatarFramework.Eye>(true);
+            if (eyes.Length == 0) { Core.Log.Warning($"[cards] '{id}': no eyes on the preview character, the {what} shows the lids as they are."); return; }
+            int blinking = 0;
+            foreach (var eye in eyes)
+            {
+                if (eye._isBlinking) blinking++;
+                eye.StopEyeCoroutines();
+                eye.SetEyelidPosition(eye._eyelidRestingPosition);
+            }
+            Core.Log.Msg($"[cards] '{id}': {eyes.Length} eyes on resting lids for the {what}, {blinking} stopped mid-blink.");
+        }
+
+        /// <summary>
         /// Renders only the preview character (moved onto <see cref="RigLayer"/> for the frame) against a clear
         /// background, <see cref="Supersample"/> times larger, and returns RGBA rows top to bottom at the asked size.
         /// The shot brings its own flat ambient and two directional lights: the editor scene is dark, and under its
@@ -349,6 +368,7 @@ namespace Personify.Host
                 rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 1 };
                 cam.targetTexture = rt;
                 cam.aspect = (float)w / h;
+                RestEyes(root, id, what);
                 cam.Render();
                 var prev = RenderTexture.active;
                 RenderTexture.active = rt;

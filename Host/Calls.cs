@@ -218,7 +218,6 @@ namespace Personify.Host
             On("stage.mode", a => { EditorHost.SetStageMode(a); return Ok; });
 
             On("catalog.look", _ => LookBridge.Catalog());
-            On("catalog.pictures", _ => LookBridge.Pictures());
             On("look.importPicture", a =>
             {
                 string rel = LookBridge.ImportPicture(Need().Project, Obj(a));

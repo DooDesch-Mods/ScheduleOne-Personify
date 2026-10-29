@@ -2079,16 +2079,9 @@ function layerStack(box, n, list) {
     write([{ path: 'appearance.' + list, value: arr.concat([{ path, tint: o.tint || '#FFFFFF' }]) }]);
     renderFields();
   })));
-  if (list === 'accessories') return;
-  box.appendChild(btn(t('+ Own picture'), 'sm', () => {
-    const pics = call('catalog.pictures');
-    if (!Array.isArray(pics)) { console.error('[personify] catalog.pictures did not answer a list'); toast(errText('picture_failed'), 'bad'); return; }
-    if (!pics.length) { toast(t('No PNG files in UserData/Personify/Import.'), 'bad'); return; }
-    pickDialog(t('Own picture'), pics.map(p => ({ value: p.file, label: p.name })), {}, f => { if (f) addPicture(list, 'import', f); });
-  }));
 }
 
-// Copies a picture into the project (from the Import folder or an Inkorporated pack) and adds it on top of a layer list.
+// Copies an Inkorporated tattoo into the project and adds it on top of a layer list.
 function addPicture(list, from, file) {
   const r = call('look.importPicture', { from, file });
   if (!r || r.ok === false) {

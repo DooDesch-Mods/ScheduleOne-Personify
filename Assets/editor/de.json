@@ -463,8 +463,5 @@
   "{n} projects imported.": "{n} Projekte importiert.",
   "{n} selected": "{n} ausgewählt",
   "{n} warnings": "{n} Warnungen",
-  "The picture could not be added.": "Das Bild ließ sich nicht hinzufügen.",
-  "+ Own picture": "+ Eigenes Bild",
-  "Own picture": "Eigenes Bild",
-  "No PNG files in UserData/Personify/Import.": "Keine PNG-Dateien in UserData/Personify/Import."
+  "The picture could not be added.": "Das Bild ließ sich nicht hinzufügen."
 }

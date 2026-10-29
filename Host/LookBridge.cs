@@ -96,36 +96,16 @@ namespace Personify.Host
             return LookJson.FromDraft(a, null);
         }
 
-        /// <summary>PNGs in UserData/Personify/Import a layer can be made from: [{file,name}], file is the file name.</summary>
-        internal static JArray Pictures()
-        {
-            var list = new JArray();
-            try
-            {
-                Directory.CreateDirectory(Paths.Import);
-                foreach (string f in Directory.GetFiles(Paths.Import, "*.png").OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
-                    list.Add(new JObject { ["file"] = Path.GetFileName(f), ["name"] = Path.GetFileNameWithoutExtension(f) });
-            }
-            catch (Exception e) { Core.Log.Error($"[look] listing {Paths.Import} failed: {e.Message}"); }
-            return list;
-        }
-
         /// <summary>
-        /// Copies a picture into the project's <c>sources/</c> folder and returns its project path ("sources/x.png"),
-        /// which is also its path inside the installed pack. <c>from</c> is "import" (a file name in the Import folder)
-        /// or "inkorporated" (a tattoo PNG from the Inkorporated catalog). Anything else is refused; null on failure.
+        /// Copies an Inkorporated tattoo into the project's <c>sources/</c> folder and returns its project path
+        /// ("sources/x.png"), which is also its path inside the installed pack. Only <c>from</c> "inkorporated" with a
+        /// PNG from the Inkorporated catalog is accepted; null on failure.
         /// </summary>
         internal static string ImportPicture(PackProject p, JObject a)
         {
             string from = (string)a?["from"], file = (string)a?["file"];
             string src = null;
-            if (from == "import")
-            {
-                if (string.IsNullOrWhiteSpace(file) || file.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-                { Core.Log.Warning($"[look] picture refused: '{file}' is not a file name in the Import folder."); return null; }
-                src = Path.Combine(Paths.Import, file);
-            }
-            else if (from == "inkorporated")
+            if (from == "inkorporated")
             {
                 src = InkorporatedCatalog.ByPng(file)?.PngPath;
                 if (src == null) { Core.Log.Warning($"[look] picture refused: '{file}' is not an Inkorporated tattoo."); return null; }

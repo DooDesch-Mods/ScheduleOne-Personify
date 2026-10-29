@@ -33,6 +33,10 @@ try
     var again = ProjectFiles.Load(p.Folder);
     Check("reload keeps the NPC", again?.FindNpc("my_crew_ana") != null);
     Check("pack carries schemaVersion 3 and editor block", (int?)again.Manifest["schemaVersion"] == 3 && (int?)again.Editor["formatVersion"] == 2);
+    Check("install manifest spawns NPCs when autoRegister is unset", (bool?)again.InstallManifest()["autoRegister"] == true);
+    again.Manifest["autoRegister"] = false;
+    Check("install manifest keeps autoRegister switched off", (bool?)again.InstallManifest()["autoRegister"] == false);
+    again.Manifest.Remove("autoRegister");
     var hist = ProjectFiles.History(again);
     Check("history has an entry", hist.Count >= 1, $"{hist.Count} entries");
     ProjectFiles.Save(again, snapshot: true, forceSnapshot: true);

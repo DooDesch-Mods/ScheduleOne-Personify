@@ -569,8 +569,28 @@ namespace Personify.Host
 
         internal static JObject VaultConnect()
         {
-            Invoke("VaultConnect", new Action<string>(s => EditorHost.Emit("vault.connect", Parse(s, "vault connect"))));
+            string handledCode = null;
+            Invoke("VaultConnect", new Action<string>(s =>
+            {
+                var state = Parse(s, "vault connect");
+                // The dialog says the code is copied and the page open, so do both once per code.
+                if (state is JObject o && (string)o["state"] == "waiting" && (string)o["userCode"] is string code && code != handledCode)
+                {
+                    handledCode = code;
+                    OpenVerifyPage(code, (string)o["verifyUrl"]);
+                }
+                EditorHost.Emit("vault.connect", state);
+            }));
             return new JObject { ["ok"] = true, ["pending"] = true };
+        }
+
+        private static void OpenVerifyPage(string code, string url)
+        {
+            try { GUIUtility.systemCopyBuffer = code; Core.Log.Msg($"[cards] vault code {code} copied to the clipboard."); }
+            catch (Exception e) { Core.Log.Warning($"[cards] vault code not copied ({e.Message}); the dialog shows it."); }
+            if (string.IsNullOrEmpty(url)) { Core.Log.Warning("[cards] vault connect has no verify address to open."); return; }
+            try { Application.OpenURL(url); Core.Log.Msg($"[cards] opened {url} in the browser."); }
+            catch (Exception e) { Core.Log.Warning($"[cards] opening {url} failed ({e.Message}); the dialog shows the address."); }
         }
 
         internal static JObject VaultDisconnect()

@@ -71,9 +71,6 @@ namespace Personify
 
         public override void OnUpdate()
         {
-#if DEBUG
-            Editor.EditorUI.SelfTestTick();
-#endif
             if (Host.EditorHost.IsOpen) Host.EditorHost.Tick();
         }
 

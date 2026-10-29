@@ -7,7 +7,7 @@
 > [Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel) NPC pack. Opens from the
 > [Side Hustle](https://github.com/DooDesch-Mods/ScheduleOne-SideHustle) hub on the main menu.
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-2.0.1-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)

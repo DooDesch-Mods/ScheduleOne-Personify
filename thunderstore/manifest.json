@@ -1,6 +1,6 @@
 {
   "name": "Personify",
-  "version_number": "2.0.0",
+  "version_number": "2.0.1",
   "website_url": "https://github.com/DooDesch-Mods/ScheduleOne-Personify",
   "description": "In-game NPC editor: build NPCs with a live 3D preview, test them next to you in your save, and publish a ready-to-upload Personnel NPC pack.",
   "dependencies": [

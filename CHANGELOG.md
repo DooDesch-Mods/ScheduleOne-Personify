@@ -3,6 +3,12 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] - 2026-10-29
+
+### Fixed
+
+- New NPCs appear in the world. Before, only copies of older NPCs did.
+
 ## [2.0.0] - 2026-10-29
 
 ### Added

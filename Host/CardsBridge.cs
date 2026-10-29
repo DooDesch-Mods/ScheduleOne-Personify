@@ -67,7 +67,7 @@ namespace Personify.Host
                 catch (Exception e) { Core.Log.Error($"[cards] a vault answer failed on the main thread ({e.GetType().Name}: {e.Message})."); }
             }
 
-            if (_job == null || Faces.Busy) return;
+            if (_job == null || Faces.Rendering) return;
             var j = _job;
             var npc = j.Project.FindNpc(j.NpcId);
             if (npc == null) { Core.Log.Warning($"[cards] '{j.NpcId}' was removed while exporting."); Done(j, Calls.Fail("npc_not_found")); return; }

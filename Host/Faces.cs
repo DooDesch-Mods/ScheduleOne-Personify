@@ -48,6 +48,10 @@ namespace Personify.Host
         /// <summary>True while faces are being rendered; the preview avatar then wears their looks.</summary>
         internal static bool Busy => _current != null || Pending.Count > 0;
 
+        /// <summary>True while one face is on the preview character. A card export waits only for that one, not for
+        /// the queue: the queue does not move while an export holds the character.</summary>
+        internal static bool Rendering => _current != null;
+
         /// <summary>A newly mounted page knows no pictures yet, and an unmounted one wants no more.</summary>
         internal static void Reset()
         {

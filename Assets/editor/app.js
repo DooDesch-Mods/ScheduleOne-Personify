@@ -428,12 +428,16 @@ function toast(text, tone) {
 // A hover hint: mouseenter says when, rect() says where.
 // One tooltip at a time. A re-render removes its anchor without a mouseleave, so the ticker also drops a tooltip
 // whose anchor has left the document.
+// A click that re-renders puts a fresh element under a resting pointer, and that element gets its own mouseenter.
+// Tooltips stay quiet after a click until the pointer moves again.
 let liveTip = null;
+let tipQuiet = false;
 function hideTip() { if (liveTip) { liveTip.node.remove(); liveTip = null; } }
+document.addEventListener('mousemove', () => { tipQuiet = false; });
 function tip(anchor, text) {
   const hide = () => { if (liveTip && liveTip.anchor === anchor) hideTip(); };
   anchor.addEventListener('mouseenter', () => {
-    if (!text) return;
+    if (!text || tipQuiet) return;
     hideTip();
     const r = rectOf(anchor);
     if (!r || !r.height) return;
@@ -447,8 +451,8 @@ function tip(anchor, text) {
     document.body.appendChild(node);
     liveTip = { node, anchor };
   });
-  anchor.addEventListener('mouseleave', hide);
-  anchor.addEventListener('click', hide);
+  anchor.addEventListener('mouseleave', () => { tipQuiet = false; hide(); });
+  anchor.addEventListener('click', () => { tipQuiet = true; hideTip(); });
 }
 
 let dialog = null;
@@ -1166,11 +1170,13 @@ function npcRow(n) {
   const pr = problemsOf(n);
   if (pr.e) r.appendChild(el('div', 'nb bad', String(pr.e)));
   else if (pr.w) r.appendChild(el('div', 'nb warn', String(pr.w)));
+  const hit = el('div', 'cbh');
   const cb = el('div', 'cb' + (checked ? ' on' : ''));
   cb.appendChild(el('div', 'cbi'));
-  cb.addEventListener('click', e => { if (e.stopPropagation) e.stopPropagation(); toggleCheck(n.id); });
-  tip(cb, t('Select several'));
-  r.appendChild(cb);
+  hit.appendChild(cb);
+  hit.addEventListener('click', e => { if (e.stopPropagation) e.stopPropagation(); toggleCheck(n.id); });
+  tip(hit, t('Select several'));
+  r.appendChild(hit);
   return r;
 }
 
@@ -1179,11 +1185,7 @@ function renderList(reset) {
   const list = filteredNpcs();
   npcVl.set(list, !reset);
   E.selbar.replaceChildren();
-  if (multi()) {
-    E.selbar.appendChild(el('div', 'selt', t('{n} selected', { n: st.selection.length })));
-    E.selbar.appendChild(el('div', 'sp'));
-    E.selbar.appendChild(btn(t('Clear'), 'xs', () => { st.selection = st.active ? [st.active] : []; selectionChanged(); }));
-  } else if (list.length > 1 && (ui.search.trim() || ui.roleFilter !== 'all')) {
+  if (!multi() && list.length > 1 && (ui.search.trim() || ui.roleFilter !== 'all')) {
     E.selbar.appendChild(el('div', 'sp'));
     E.selbar.appendChild(btn(t('Select all shown'), 'xs', () => {
       st.selection = list.map(n => n.id);
@@ -1195,7 +1197,8 @@ function renderList(reset) {
   const acts = E.sideActs;
   acts.replaceChildren();
   if (multi()) {
-    acts.appendChild(btn(t('Remove {n}', { n: st.selection.length }), 'bad grow', () => removeNpcs(st.selection.slice()), 'trash'));
+    acts.appendChild(btn(t('Clear'), 'grow', () => { st.selection = st.active ? [st.active] : []; selectionChanged(); }));
+    acts.appendChild(ibtn('trash', t('Remove {n}', { n: st.selection.length }), () => removeNpcs(st.selection.slice())));
     return;
   }
   acts.appendChild(btn(t('New NPC'), 'grow', wizard, 'plus'));
@@ -1239,6 +1242,11 @@ function toggleCheck(id) {
 
 function selectionChanged() {
   ui.focusField = null;
+  if (multi() && (st.area === 'look' || st.area === 'routine')) {
+    st.area = 'role';
+    ui.pick = null;
+    renderTop();
+  }
   renderList();
   renderFields();
   renderStage();
@@ -1455,8 +1463,9 @@ function wireStage() {
     const wasDown = ptr.down;
     ptr.down = false;
     if (wasDown && !ptr.moved && st.area === 'routine') mapClick(e.clientX, e.clientY);
+    settleMap();
   });
-  s.addEventListener('lostpointercapture', () => { ptr.down = false; });
+  s.addEventListener('lostpointercapture', () => { ptr.down = false; settleMap(); });
   s.addEventListener('wheel', e => {
     const d = wheelDir(e);
     if (e.preventDefault) e.preventDefault();
@@ -1541,11 +1550,18 @@ function s2w(sx, sy) {
   return { x: m.minX + u * (m.maxX - m.minX), z: m.minZ + v * (m.maxZ - m.minZ), inside: u >= 0 && u <= 1 && v >= 0 && v <= 1 };
 }
 
+// A drag moves the drawn overlay as one piece; rebuilding its pins on every pointer step drops the editor to
+// a few frames a second. The pins are rebuilt once the drag ends.
+const panOff = { x: 0, y: 0 };
 function panMap(dx, dy) {
   if (!mapNodes) return;
   mv.px += dx; mv.py += dy;
+  panOff.x += dx; panOff.y += dy;
   applyMapTransform();
-  drawMapOverlay();
+  mapNodes.ov.style.transform = 'translate(' + round(panOff.x, 1) + 'px, ' + round(panOff.y, 1) + 'px)';
+}
+function settleMap() {
+  if (mapNodes && (panOff.x || panOff.y)) drawMapOverlay();
 }
 
 function zoomMap(d) {
@@ -1623,6 +1639,8 @@ function drawMapOverlay() {
   if (!mapNodes || !st.map) return;
   const ov = mapNodes.ov;
   ov.replaceChildren();
+  panOff.x = 0; panOff.y = 0;
+  ov.style.transform = 'translate(0px, 0px)';
   const n = npcById(st.active);
   if (!n) return;
   const pts = [];

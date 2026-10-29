@@ -218,6 +218,12 @@ namespace Personify.Host
             On("stage.mode", a => { EditorHost.SetStageMode(a); return Ok; });
 
             On("catalog.look", _ => LookBridge.Catalog());
+            On("catalog.pictures", _ => LookBridge.Pictures());
+            On("look.importPicture", a =>
+            {
+                string rel = LookBridge.ImportPicture(Need().Project, Obj(a));
+                return rel == null ? Fail("picture_failed") : new JObject { ["ok"] = true, ["file"] = rel };
+            });
             On("catalog.world", _ => WorldBridge.Catalog());
             On("catalog.effects", _ => GameData.Effects());
             On("world.map", _ => WorldBridge.Map());

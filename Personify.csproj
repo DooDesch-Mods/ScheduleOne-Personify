@@ -100,6 +100,10 @@
     <EmbeddedResource Include="Assets/editor/*" Exclude="Assets/editor/mock.js;Assets/editor/preview.html">
       <LogicalName>Personify.Assets.editor.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <!-- The glob above does not reach into subfolders; an <img src="icons/x.png"> resolves to this dotted name. -->
+    <EmbeddedResource Include="Assets/editor/icons/*.png">
+      <LogicalName>Personify.Assets.editor.icons.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Assets/phone/*" Exclude="Assets/phone/preview.html;Assets/phone/s1-mock.js;Assets/phone/sideload-preview.js;Assets/phone/sideload-preview.css;Assets/phone/dom-surface.js;Assets/phone/globals.js">

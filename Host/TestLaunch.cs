@@ -16,7 +16,13 @@ namespace Personify.Host
             var list = new JArray();
             try
             {
-                if (PersistentSingleton<LoadManager>.InstanceExists) PersistentSingleton<LoadManager>.Instance.RefreshSaveInfo();
+                if (PersistentSingleton<LoadManager>.InstanceExists)
+                {
+                    PersistentSingleton<LoadManager>.Instance.RefreshSaveInfo();
+                    // Refreshing the save info dresses the menu character in the newest save's look, which is the
+                    // preview character; the shown NPC is put back on it.
+                    EditorHost.ReapplyPreview();
+                }
                 var games = LoadManager.SaveGames;
                 if (games == null) { Core.Log.Warning("[test] the game has no save list yet."); return list; }
                 DateTime newest = DateTime.MinValue;

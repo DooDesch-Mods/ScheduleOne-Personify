@@ -209,6 +209,8 @@ namespace Personify.Host
                 d["portrait"] = rel;
                 return d;
             });
+            On("faces.capture", _ => Faces.Capture(Need().Project));
+            On("faces.wall", _ => Faces.Wall());
             On("stage.rect", a =>
             {
                 var o = Obj(a);

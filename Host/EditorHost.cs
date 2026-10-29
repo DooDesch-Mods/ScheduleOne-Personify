@@ -82,6 +82,7 @@ namespace Personify.Host
                 return;
             }
             WorldBridge.Reset();
+            Faces.Reset();
             Calls.Register(_surface);
             Core.Log.Msg("[editor] editor page mounted.");
         }
@@ -112,6 +113,10 @@ namespace Personify.Host
             catch (Exception e) { Core.Log.Error("[editor] autosave failed: " + e.Message); }
 
             if (_stageOn) ApplyCamera();
+            // Face renders borrow the preview character; the shown NPC goes back on when they are done.
+            try { Faces.Tick(); }
+            catch (Exception e) { Core.Log.Error($"[faces] rendering failed ({e.GetType().Name}: {e.Message}); the queue is dropped."); Faces.Reset(); ReapplyPreview(); }
+            if (Faces.Busy) return;
             if (!_previewDirty || Time.time - _lastEdit <= 0.12f) return;
             var npc = _previewId == null ? null : Project?.FindNpc(_previewId);
             if (npc == null) { _previewDirty = false; return; }
@@ -121,6 +126,7 @@ namespace Personify.Host
 
         internal static void LateTick()
         {
+            if (Faces.Busy) return;
             var npc = _previewId == null ? null : Project?.FindNpc(_previewId);
             if (npc != null) LookBridge.ReassertDistortion(npc);
         }
@@ -164,6 +170,15 @@ namespace Personify.Host
             _previewId = id;
             _previewDirty = true;
             _lastEdit = 0f;
+        }
+
+        /// <summary>Puts the shown NPC's look back on the preview character after something else changed it.</summary>
+        internal static void ReapplyPreview()
+        {
+            if (_previewId == null) { Core.Log.Msg("[editor] no NPC on the preview to put back."); return; }
+            _previewDirty = true;
+            _lastEdit = 0f;
+            Core.Log.Msg($"[editor] preview look of '{_previewId}' reapplied.");
         }
 
         internal static bool Expert { get => _expert; set => _expert = value; }

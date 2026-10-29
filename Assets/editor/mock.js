@@ -415,6 +415,14 @@
     'preview.show': () => ({ ok: true }),
     'preview.rotate': () => ({ ok: true }),
     'preview.zoom': () => ({ ok: true }),
+    // Faces: the mock has no renderer, so every NPC shows its initials.
+    'faces.capture': () => ({ ok: true, faces: {} }),
+    'faces.wall': () => {
+      const w = {};
+      const crew = { 'night-shift': ['Mara Quinn', 'Theo Vance', 'Lena Brooks', 'Dex Moreno', 'Ivy Chen'], 'docks-crew': ['Sal Ortega', 'June Park'] };
+      for (const p of projects) w[p.folder] = (crew[p.folder] || []).map(n => ({ id: n.toLowerCase().replace(' ', '_'), name: n, face: null }));
+      return w;
+    },
     'portrait.capture': id => {
       const n = project.npcs.find(x => x.id === id);
       if (!n) return fail('npc_not_found');

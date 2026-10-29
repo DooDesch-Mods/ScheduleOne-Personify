@@ -143,9 +143,37 @@ namespace Personify.Host
         internal static string CapturePortrait(PackProject p, JObject npc)
         {
             string id = (string)npc["id"];
-            if (!Apply(p, npc)) { Core.Log.Warning($"[portrait] '{id}': the preview character is not available."); return null; }
+            if (Faces.Busy) { Core.Log.Warning($"[portrait] '{id}': refused while faces are rendering on the preview character."); return null; }
+            byte[] png = RenderHead(p, npc, 256, "portrait");
+            if (png == null) return null;
+            try
+            {
+                string rel = "portraits/" + id + ".png";
+                string abs = Path.Combine(p.Dir, "portraits", id + ".png");
+                Directory.CreateDirectory(Path.GetDirectoryName(abs));
+                File.WriteAllBytes(abs, png);
+                Core.Log.Msg($"[portrait] '{id}': contact picture written to {abs} ({png.Length} bytes).");
+                return rel;
+            }
+            catch (Exception e)
+            {
+                Core.Log.Error($"[portrait] '{id}': writing the contact picture failed ({e.GetType().Name}: {e.Message}).");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Puts the NPC's look on the preview avatar and renders its head into a square PNG of <paramref name="size"/>
+        /// pixels with a temporary camera. Null after logging why not; <paramref name="tag"/> prefixes the log lines.
+        /// With <paramref name="apply"/> false the look must already be on the avatar for a few frames: hair and
+        /// accessories of the previous look are destroyed only at the end of the frame the new one is applied.
+        /// </summary>
+        internal static byte[] RenderHead(PackProject p, JObject npc, int size, string tag, bool apply = true)
+        {
+            string id = (string)npc["id"];
+            if (apply && !Apply(p, npc)) { Core.Log.Warning($"[{tag}] '{id}': the preview character is not available."); return null; }
             var head = Preview.HeadTransform();
-            if (head == null) { Core.Log.Warning($"[portrait] '{id}': no head bone on the preview character."); return null; }
+            if (head == null) { Core.Log.Warning($"[{tag}] '{id}': no head bone on the preview character."); return null; }
 
             GameObject go = null;
             RenderTexture rt = null;
@@ -163,26 +191,20 @@ namespace Personify.Host
                 Vector3 forward = Preview.FacingDirection();
                 cam.transform.position = target + forward * 1.15f;
                 cam.transform.LookAt(target);
-                rt = new RenderTexture(256, 256, 24, RenderTextureFormat.ARGB32);
+                rt = new RenderTexture(size, size, 24, RenderTextureFormat.ARGB32);
                 cam.targetTexture = rt;
                 cam.Render();
                 var prev = RenderTexture.active;
                 RenderTexture.active = rt;
-                tex = new Texture2D(256, 256, TextureFormat.RGB24, false);
-                tex.ReadPixels(new Rect(0, 0, 256, 256), 0, 0);
+                tex = new Texture2D(size, size, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, size, size), 0, 0);
                 tex.Apply();
                 RenderTexture.active = prev;
-                byte[] png = ImageConversion.EncodeToPNG(tex);
-                string rel = "portraits/" + id + ".png";
-                string abs = Path.Combine(p.Dir, "portraits", id + ".png");
-                Directory.CreateDirectory(Path.GetDirectoryName(abs));
-                File.WriteAllBytes(abs, png);
-                Core.Log.Msg($"[portrait] '{id}': contact picture written to {abs} ({png.Length} bytes).");
-                return rel;
+                return ImageConversion.EncodeToPNG(tex);
             }
             catch (Exception e)
             {
-                Core.Log.Error($"[portrait] '{id}': capture failed ({e.GetType().Name}: {e.Message}).");
+                Core.Log.Error($"[{tag}] '{id}': rendering the head failed ({e.GetType().Name}: {e.Message}).");
                 return null;
             }
             finally

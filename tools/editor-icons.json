@@ -1,0 +1,32 @@
+{
+  "_": "Lucide glyphs for the Personify editor surface, rendered by Workspace/tools/icongen (node gen.js <this file>). Flat white, no halo: the stylesheet tints each glyph through `color`.",
+  "out": "../Assets/editor/icons",
+  "size": 64,
+  "color": "#ffffff",
+  "stroke": 2,
+  "icons": {
+    "undo": "undo-2",
+    "redo": "redo-2",
+    "chev-down": "chevron-down",
+    "chev-right": "chevron-right",
+    "more": "ellipsis",
+    "plus": "plus",
+    "copy": "copy",
+    "trash": "trash-2",
+    "search": "search",
+    "play": "play",
+    "install": "package-check",
+    "dice": "dices",
+    "camera": "camera",
+    "close": "x",
+    "alert": "triangle-alert",
+    "check": "circle-check",
+    "back": "arrow-left",
+    "import": "package-plus",
+    "history": "history",
+    "publish": "upload",
+    "settings": "settings-2",
+    "restart": "rotate-ccw",
+    "user": "user-round"
+  }
+}

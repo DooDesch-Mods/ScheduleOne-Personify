@@ -270,6 +270,22 @@ namespace Personify.Host
             On("packs.toggle", a => { var o = Obj(a); return PacksBridge.Toggle((string)o["folder"], (bool?)o["enabled"] ?? true); });
             On("packs.remove", a => PacksBridge.Remove(a));
 
+            On("cards.export", a => CardsBridge.StartExport(Need().Project, a));
+            On("cards.exports", _ => CardsBridge.Exports());
+            On("cards.installed", _ => CardsBridge.Installed());
+            On("cards.remove", a => CardsBridge.Remove(a));
+            On("cards.import", a => CardsBridge.ImportFile(a));
+            On("cards.folders", _ => CardsBridge.Folders());
+            On("cards.openFolder", a => CardsBridge.OpenFolder(a));
+            On("cards.remix", a => CardsBridge.Remix(a));
+            On("vault.state", _ => CardsBridge.VaultState());
+            On("vault.connect", _ => CardsBridge.VaultConnect());
+            On("vault.disconnect", _ => CardsBridge.VaultDisconnect());
+            On("vault.get", a => { var o = Obj(a); return CardsBridge.VaultGet((string)o["id"], (string)o["path"]); });
+            On("vault.install", a => { var o = Obj(a); return CardsBridge.VaultInstall((string)o["id"], (string)o["code"]); });
+            On("vault.upload", a => { var o = Obj(a); return CardsBridge.VaultUpload((string)o["id"], (string)o["file"]); });
+            On("vault.thumb", a => CardsBridge.VaultThumb(a));
+
             On("editor.exit", _ => { EditorHost.RequestExit(); return Ok; });
         }
 

@@ -123,6 +123,13 @@ namespace Personify.Editor
             catch (Exception e) { Core.Log?.Warning("[preview] head bone: " + e.Message); return null; }
         }
 
+        /// <summary>The preview character's root object, for whole-body renders; null when there is none.</summary>
+        public static Transform AvatarRoot()
+        {
+            if (!EnsureAvatar() || _avatar.gameObject == null) return null;
+            return _avatar.gameObject.transform;
+        }
+
         /// <summary>The direction the preview character faces (its forward on the ground plane).</summary>
         public static Vector3 FacingDirection()
         {

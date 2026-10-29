@@ -188,6 +188,38 @@ textarea.inp { height: 72px; padding: 9px 12px; }
 .prow:hover { background-color: var(--s2); }
 .prow .pnm { font-size: 15px; }
 
+/* ---------- start screen: cards and the NPC Vault ---------- */
+
+.stabs { flex-direction: row; gap: 26px; align-items: flex-end; }
+.stab { flex-direction: row; align-items: center; gap: 6px; height: 44px; font-size: 26px; font-weight: 800; color: var(--dim); border-bottom: 3px solid #090A0D; transition: color 120ms; }
+.stab:hover { color: var(--mu); }
+.stab.on { color: var(--tx); border-bottom: 3px solid var(--neon); }
+.cgh { font-size: 18px; font-weight: 800; margin-top: 10px; flex: none; }
+.cgrid { gap: 18px; padding-bottom: 8px; flex: none; }
+.ccard { width: 216px; padding: 10px; gap: 10px; border-radius: 12px; background-color: var(--s1); flex: none; }
+.cpic { width: 196px; height: 274px; border-radius: 6px; background-color: var(--s0); justify-content: center; align-items: center; overflow: hidden; }
+.cpic img { width: 196px; height: 274px; }
+.cpic.big { width: 360px; height: 504px; flex: none; }
+.cpic.big img { width: 360px; height: 504px; }
+.cnm { font-size: 15px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.cacts { flex-direction: row; align-items: center; gap: 6px; }
+.cstat { flex-direction: row; align-items: center; gap: 5px; font-size: 13px; color: var(--mu); }
+.cstat .lu { width: 15px; height: 15px; }
+.cstat div { margin-right: 8px; }
+.cown { height: 34px; padding: 0 4px; font-size: 13px; font-weight: 700; color: var(--cash); justify-content: center; }
+.cnote { flex-direction: row; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background-color: var(--warnbg); color: var(--warn); font-size: 14px; font-weight: 600; flex: none; }
+.cnote .lu { color: var(--warn); }
+.vbar { flex-direction: row; align-items: center; gap: 12px; flex: none; }
+.inp.vq { width: 320px; height: 38px; }
+.vuser { color: var(--mu); font-size: 14px; }
+.cbody { gap: 12px; }
+.curl { font-size: 16px; font-weight: 700; color: var(--neontx); }
+.ccode { font-size: 40px; font-weight: 800; color: var(--tx); }
+.ccode.sm { font-size: 30px; }
+.dialog.cardd { width: 720px; }
+.cdrow { flex-direction: row; gap: 22px; }
+.cdside { flex-grow: 1; min-width: 0; gap: 12px; }
+
 /* ---------- editor: the stage and the panels over it ---------- */
 
 .ed { position: relative; height: 100%; }

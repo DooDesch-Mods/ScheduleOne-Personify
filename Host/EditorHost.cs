@@ -114,9 +114,14 @@ namespace Personify.Host
 
             if (_stageOn) ApplyCamera();
             // Face renders borrow the preview character; the shown NPC goes back on when they are done.
-            try { Faces.Tick(); }
-            catch (Exception e) { Core.Log.Error($"[faces] rendering failed ({e.GetType().Name}: {e.Message}); the queue is dropped."); Faces.Reset(); ReapplyPreview(); }
-            if (Faces.Busy) return;
+            // Face renders and card exports both borrow the preview character, one at a time.
+            if (!CardsBridge.Busy)
+            {
+                try { Faces.Tick(); }
+                catch (Exception e) { Core.Log.Error($"[faces] rendering failed ({e.GetType().Name}: {e.Message}); the queue is dropped."); Faces.Reset(); ReapplyPreview(); }
+            }
+            CardsBridge.Tick();
+            if (Faces.Busy || CardsBridge.Busy) return;
             if (!_previewDirty || Time.time - _lastEdit <= 0.12f) return;
             var npc = _previewId == null ? null : Project?.FindNpc(_previewId);
             if (npc == null) { _previewDirty = false; return; }
@@ -126,7 +131,7 @@ namespace Personify.Host
 
         internal static void LateTick()
         {
-            if (Faces.Busy) return;
+            if (Faces.Busy || CardsBridge.Busy) return;
             var npc = _previewId == null ? null : Project?.FindNpc(_previewId);
             if (npc != null) LookBridge.ReassertDistortion(npc);
         }

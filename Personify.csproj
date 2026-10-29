@@ -105,6 +105,12 @@
       <LogicalName>Personify.Assets.editor.icons.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+  <!-- Glyph atlases for the card picture (tools/card-font.py); Cards/CardArt.cs loads them by these names. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/card/*.json;Assets/card/*.bin">
+      <LogicalName>Personify.Assets.card.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Assets/phone/*" Exclude="Assets/phone/preview.html;Assets/phone/s1-mock.js;Assets/phone/sideload-preview.js;Assets/phone/sideload-preview.css;Assets/phone/dom-surface.js;Assets/phone/globals.js">
       <LogicalName>Personify.Assets.phone.%(Filename)%(Extension)</LogicalName>

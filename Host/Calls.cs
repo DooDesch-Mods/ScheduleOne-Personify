@@ -48,6 +48,9 @@ namespace Personify.Host
             });
             On("projects.open", a =>
             {
+                // The open project is saved first: reopening it straight away would otherwise read the file before
+                // the last edits reach it, and the next autosave would write the stale copy back.
+                EditorHost.CloseProject();
                 var p = ProjectFiles.Load(a);
                 if (p == null) return Fail("not_found");
                 EditorHost.OpenProject(p);

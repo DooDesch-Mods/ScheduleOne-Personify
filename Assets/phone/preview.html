@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Browser preview of the Personify phone app. Serve this folder over http and open this file; the shell files
+     (sideload-preview.*, dom-surface.js, globals.js) are copies from Workspace/tools/sideload-preview. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="sideload-preview.css">
+</head>
+<body>
+<script type="module">
+import { mount } from './sideload-preview.js';
+import { call, ready, scenarios } from './s1-mock.js';
+
+mount({
+  title: 'Personify',
+  appId: 'personify-phone',
+  background: '#0F1216',
+  accent: '#3E7BFA',
+  note: 'The mock opens on the last choice, like the game after a Test launch. The scenarios apply on the next reload of the page.',
+  call,
+  ready,
+  scenarios,
+});
+</script>
+</body>
+</html>

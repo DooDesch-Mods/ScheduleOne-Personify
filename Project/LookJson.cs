@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using Personify.Editor;
 
@@ -10,8 +12,9 @@ namespace Personify.Project
     /// </summary>
     public static class LookJson
     {
-        /// <summary>Manifest block from a draft. Hidden layers go to <paramref name="hidden"/> under their list name.</summary>
-        public static JObject FromDraft(AppearanceDraft a, JObject hidden)
+        /// <summary>Manifest block from a draft. Hidden layers go to <paramref name="hidden"/> as
+        /// <c>{list, index, path|file, tint}</c>, the shape the editor page keeps in <c>personify.hiddenLayers</c>.</summary>
+        public static JObject FromDraft(AppearanceDraft a, JArray hidden)
         {
             var app = new JObject
             {
@@ -44,7 +47,7 @@ namespace Personify.Project
         {
             var d = new AppearanceDraft();
             var a = npc?["appearance"] as JObject;
-            var hidden = npc?[PackProject.EditorKey]?["hiddenLayers"] as JObject;
+            var hiddenToken = npc?[PackProject.EditorKey]?["hiddenLayers"];
             if (a != null)
             {
                 d.Gender = F(a, "gender", d.Gender); d.Height = F(a, "height", d.Height); d.Weight = F(a, "weight", d.Weight);
@@ -68,13 +71,26 @@ namespace Personify.Project
                                 ScaleX = F(b, "scaleX", 1f), ScaleY = F(b, "scaleY", 1f), ScaleZ = F(b, "scaleZ", 1f), Hide = (bool?)b["hide"] ?? false,
                             };
             }
-            if (hidden != null)
+            if (hiddenToken is JArray hiddenList)
+            {
+                // Inserted in index order, so each lands where it sat when it was switched off.
+                foreach (var h in hiddenList.OfType<JObject>().OrderBy(h => (int?)h["index"] ?? int.MaxValue))
+                {
+                    var dst = ListOf(d, (string)h["list"]);
+                    if (dst == null) continue;
+                    var layer = Layer(h, false);
+                    int at = Math.Max(0, Math.Min(dst.Count, (int?)h["index"] ?? dst.Count));
+                    dst.Insert(at, layer);
+                }
+            }
+            else if (hiddenToken is JObject hidden)
             {
                 ReadLayers(hidden["faceLayers"] as JArray, d.FaceLayers, false);
                 ReadLayers(hidden["bodyLayers"] as JArray, d.BodyLayers, false);
                 ReadLayers(hidden["accessories"] as JArray, d.Accessories, false);
             }
-            if ((bool?)npc?[PackProject.EditorKey]?["eyelidFollowsSkin"] == false) d.EyelidFollowsSkin = false;
+            var ed = npc?[PackProject.EditorKey];
+            if ((bool?)ed?["eyelidsCustom"] == true || (bool?)ed?["eyelidFollowsSkin"] == false) d.EyelidFollowsSkin = false;
             return d;
         }
 
@@ -82,19 +98,34 @@ namespace Personify.Project
         {
             if (src == null) return;
             foreach (var t in src)
+                if (t is JObject l) dst.Add(Layer(l, visible));
+        }
+
+        private static LayerDraft Layer(JObject l, bool visible)
+        {
+            string tint = (string)l["tint"] ?? (string)l["color"] ?? "#FFFFFF";
+            return new LayerDraft { Path = (string)l["path"] ?? "", Source = (string)l["file"] ?? "", Tint = tint, Visible = visible };
+        }
+
+        private static List<LayerDraft> ListOf(AppearanceDraft d, string list)
+        {
+            switch (list)
             {
-                if (!(t is JObject l)) continue;
-                string tint = (string)l["tint"] ?? (string)l["color"] ?? "#FFFFFF";
-                dst.Add(new LayerDraft { Path = (string)l["path"] ?? "", Source = (string)l["file"] ?? "", Tint = tint, Visible = visible });
+                case "faceLayers": return d.FaceLayers;
+                case "bodyLayers": return d.BodyLayers;
+                case "accessories": return d.Accessories;
+                default:
+                    ProjectLog.Warn($"[look] hidden layer names an unknown list '{list}' - skipped.");
+                    return null;
             }
         }
 
         // Visible layers go into the manifest; hidden ones into the editor block under the same list name. A custom
         // picture keeps its project path ("sources/x.png"), which is also its path inside the installed pack.
-        private static JArray Layers(List<LayerDraft> src, string kind, string colourKey, JObject hidden, string listName)
+        private static JArray Layers(List<LayerDraft> src, string kind, string colourKey, JArray hidden, string listName)
         {
             var visible = new JArray();
-            var off = new JArray();
+            int index = 0;
             foreach (var l in src ?? new List<LayerDraft>())
             {
                 if (l == null) continue;
@@ -102,9 +133,16 @@ namespace Personify.Project
                 if (!string.IsNullOrWhiteSpace(l.Source) && kind != null) lo = new JObject { ["file"] = l.Source, ["kind"] = kind, [colourKey] = l.Tint };
                 else if (!string.IsNullOrWhiteSpace(l.Path)) lo = new JObject { ["path"] = l.Path, [colourKey] = l.Tint };
                 else continue;
-                (l.Visible ? visible : off).Add(lo);
+                if (l.Visible) visible.Add(lo);
+                else if (hidden != null)
+                {
+                    var h = new JObject { ["list"] = listName, ["index"] = index };
+                    if (lo["file"] != null) h["file"] = lo["file"]; else h["path"] = lo["path"];
+                    h["tint"] = l.Tint;
+                    hidden.Add(h);
+                }
+                index++;
             }
-            if (off.Count > 0 && hidden != null) hidden[listName] = off;
             return visible;
         }
 

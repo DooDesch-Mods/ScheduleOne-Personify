@@ -64,7 +64,7 @@ try
     var bob = mig?.FindNpc("old_pack_bob_stone");
     Check("migration keeps the 1.x id", bob != null);
     Check("migration keeps the custom layer as a pack file", (string)bob?["appearance"]?["faceLayers"]?[0]?["file"] == "sources/grin.png");
-    Check("hidden layer moves to the editor block", (string)bob?["personify"]?["hiddenLayers"]?["faceLayers"]?[0]?["path"] == "slightsmile"
+    Check("hidden layer moves to the editor block", (string)bob?["personify"]?["hiddenLayers"]?[0]?["path"] == "slightsmile" && (string)bob["personify"]["hiddenLayers"][0]["list"] == "faceLayers"
                                                     && ((JArray)bob["appearance"]["faceLayers"]).Count == 1);
     Check("switched-off behaviour is kept, not exported", bob?["behavior"] == null && (float?)bob?["personify"]?["behaviorOff"]?["aggression"] == 0.7f);
     Check("backrooms extension exported", (string)bob?["extensions"]?["backrooms"]?["biomes"]?[1] == "L1");
@@ -189,15 +189,22 @@ try
     es.Change("remove", () => NpcFactory.Remove(es.Project, new[] { "edit_pack_ana_2" }), t0 + 12);
     Check("remove drops the NPC", es.Project.FindNpc("edit_pack_ana_2") == null);
 
+    var es2 = new EditSession(ep);
+    es2.Apply(new[] { "edit_pack_sully" }, new[] { new FieldChange { Path = "appearance.skinColor", Value = "#111111" }, new FieldChange { Path = "appearance.leftEyeLidColor", Value = "#111111" } }, 500);
+    es2.Apply(new[] { "edit_pack_sully" }, new[] { new FieldChange { Path = "appearance.skinColor", Value = "#222222" }, new FieldChange { Path = "appearance.leftEyeLidColor", Value = "#222222" } }, 500.3);
+    Check("a batch and its live values are one undo step", es2.Undo(501) && es2.Project.FindNpc("edit_pack_sully")["appearance"]?["skinColor"] == null && !es2.CanUndo);
+    es2.Apply(new[] { "edit_pack_sully" }, new[] { new FieldChange { Path = "behavior.scale", Value = 1.2 }, new FieldChange { Path = "behavior.scale", Unset = true } }, 600);
+    Check("batch unset removes the field", es2.Project.FindNpc("edit_pack_sully")["behavior"]?["scale"] == null);
+
     // 6c. Look round trip through the preview draft.
-    var look = JObject.Parse("{\"appearance\":{\"gender\":0.7,\"leftEye\":{\"top\":0.3,\"bottom\":0.6},\"faceLayers\":[{\"file\":\"sources/a.png\",\"kind\":\"face\",\"tint\":\"#FF0000\"}],\"accessories\":[{\"path\":\"Avatar/Accessories/Head/Cap/Cap\",\"color\":\"#00FF00\"}],\"distortion\":{\"Head\":{\"scaleX\":2}}},\"personify\":{\"hiddenLayers\":{\"bodyLayers\":[{\"path\":\"x\",\"tint\":\"#FFFFFF\"}]}}}");
+    var look = JObject.Parse("{\"appearance\":{\"gender\":0.7,\"leftEye\":{\"top\":0.3,\"bottom\":0.6},\"faceLayers\":[{\"file\":\"sources/a.png\",\"kind\":\"face\",\"tint\":\"#FF0000\"}],\"accessories\":[{\"path\":\"Avatar/Accessories/Head/Cap/Cap\",\"color\":\"#00FF00\"}],\"distortion\":{\"Head\":{\"scaleX\":2}}},\"personify\":{\"hiddenLayers\":[{\"list\":\"bodyLayers\",\"index\":0,\"path\":\"x\",\"tint\":\"#FFFFFF\"}]}}");
     var dr = LookJson.ToDraft(look);
     Check("draft reads the manifest look", dr.Gender == 0.7f && dr.LeftEyeTop == 0.3f && dr.FaceLayers[0].Source == "sources/a.png"
           && dr.Accessories[0].Tint == "#00FF00" && dr.Distortion["Head"].ScaleX == 2f && dr.BodyLayers.Count == 1 && !dr.BodyLayers[0].Visible);
-    var hid = new JObject();
+    var hid = new JArray();
     var back2 = LookJson.FromDraft(dr, hid);
     Check("draft writes the same look back", (string)back2["faceLayers"][0]["file"] == "sources/a.png" && (string)back2["accessories"][0]["color"] == "#00FF00"
-          && (string)hid["bodyLayers"]?[0]?["path"] == "x" && Math.Abs((double)back2["leftEye"]["bottom"] - 0.6) < 1e-5);
+          && (string)hid[0]?["path"] == "x" && (string)hid[0]["list"] == "bodyLayers" && Math.Abs((double)back2["leftEye"]["bottom"] - 0.6) < 1e-5);
 
     // 7. Real format 1 projects, migrated as copies.
     if (args.Length > 0 && Directory.Exists(args[0]))

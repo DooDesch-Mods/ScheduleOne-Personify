@@ -94,6 +94,31 @@ namespace Personify.Host
             return list;
         }
 
+        private static JArray _effects;
+
+        /// <summary>Product effects a customer can favour: [{id,name,tier}], from the game's tier folders.</summary>
+        internal static JArray Effects()
+        {
+            if (_effects != null && _effects.Count > 0) return _effects;
+            var list = new JArray();
+            try
+            {
+                for (int tier = 1; tier <= 5; tier++)
+                {
+                    var found = UnityEngine.Resources.LoadAll<Il2CppScheduleOne.Effects.Effect>("Properties/Tier" + tier);
+                    if (found == null) continue;
+                    foreach (var e in found)
+                        if (e != null && !string.IsNullOrEmpty(e.ID))
+                            list.Add(new JObject { ["id"] = e.ID, ["name"] = e.Name ?? e.ID, ["tier"] = e.Tier });
+                }
+                if (list.Count == 0) Core.Log.Warning("[world] no product effects found under Resources/Properties/Tier1-5.");
+                else Core.Log.Msg($"[world] effect list read: {list.Count} effect(s).");
+            }
+            catch (Exception e) { Core.Log.Error("[world] reading the product effects failed: " + e.Message); }
+            _effects = list;
+            return list;
+        }
+
         private static string _personnelVersion;
 
         /// <summary>Personnel's version, read at runtime so Personify does not reference Personnel; null when not loaded.</summary>

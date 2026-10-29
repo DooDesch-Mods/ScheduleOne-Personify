@@ -59,7 +59,7 @@ namespace Personify.Host
                 ["minX"] = w.MinX, ["minZ"] = w.MinZ, ["maxX"] = w.MaxX, ["maxZ"] = w.MaxZ,
                 ["places"] = new JArray(w.Places.Select(p => new JObject
                 {
-                    ["kind"] = p.Kind, ["name"] = string.IsNullOrEmpty(p.Path) ? p.Name : p.Path, ["label"] = p.Label,
+                    ["kind"] = p.Kind == "parking" ? "carpark" : p.Kind, ["name"] = string.IsNullOrEmpty(p.Path) ? p.Name : p.Path, ["label"] = p.Label,
                     ["x"] = Math.Round(p.X, 2), ["y"] = Math.Round(p.Y, 2), ["z"] = Math.Round(p.Z, 2),
                 })),
                 ["vehicles"] = new JArray(w.Vehicles.Select(v => new JObject { ["code"] = v.Code, ["label"] = v.Label })),

@@ -45,22 +45,29 @@ namespace Personify.Project
         /// objects changed.
         /// </summary>
         public int Set(IReadOnlyList<string> ids, string path, JToken value, double now)
-        {
-            path = PackPath(ids, path);
-            int changed = 0;
-            foreach (var target in Targets(ids))
-                if (JsonPath.Set(target, path, value)) changed++;
-            if (changed > 0) Edited(path, ids, now);
-            return changed;
-        }
+            => Apply(ids, new[] { new FieldChange { Path = path, Value = value } }, now);
 
         public int Unset(IReadOnlyList<string> ids, string path, double now)
+            => Apply(ids, new[] { new FieldChange { Path = path, Unset = true } }, now);
+
+        /// <summary>
+        /// Applies several field changes as one undo step (a customer profile, a start point, skin plus both lid
+        /// colours). The same set of paths edited again within a second extends that step, so a slider's live values
+        /// and its final value end up as one. Returns the number of field writes that changed something.
+        /// </summary>
+        public int Apply(IReadOnlyList<string> ids, IReadOnlyList<FieldChange> changes, double now)
         {
-            path = PackPath(ids, path);
             int changed = 0;
-            foreach (var target in Targets(ids))
-                if (JsonPath.Unset(target, path)) changed++;
-            if (changed > 0) Edited(path, ids, now);
+            var paths = new List<string>();
+            foreach (var c in changes)
+            {
+                if (c == null) continue;
+                string path = PackPath(ids, c.Path);
+                paths.Add(path);
+                foreach (var target in Targets(ids))
+                    if (c.Unset ? JsonPath.Unset(target, path) : JsonPath.Set(target, path, c.Value)) changed++;
+            }
+            if (changed > 0) Edited(string.Join("+", paths), ids, now);
             return changed;
         }
 
@@ -150,6 +157,14 @@ namespace Personify.Project
             else ProjectLog.Error($"[edit] '{Project.Folder}' could not be saved - the edits stay in memory and are retried.");
             return ok;
         }
+    }
+
+    /// <summary>One field write of a batch: a value, or the removal of the field.</summary>
+    public sealed class FieldChange
+    {
+        public string Path;
+        public JToken Value;
+        public bool Unset;
     }
 
     /// <summary>Dotted paths into JSON objects ("appearance.faceLayers.0.tint").</summary>

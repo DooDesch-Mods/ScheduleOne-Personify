@@ -101,6 +101,11 @@
       <LogicalName>Personify.Assets.editor.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/phone/*" Exclude="Assets/phone/preview.html;Assets/phone/s1-mock.js;Assets/phone/sideload-preview.js;Assets/phone/sideload-preview.css;Assets/phone/dom-surface.js;Assets/phone/globals.js">
+      <LogicalName>Personify.Assets.phone.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
 
   <!-- The Sideload.Api shim as source, resolved like SideHustle does: the sibling Sideload checkout in the monorepo,
        else the copy under the build libs. The shim finds the host by reflection; every call is a no-op without it. -->

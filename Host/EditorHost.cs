@@ -105,6 +105,8 @@ namespace Personify.Host
         internal static void Tick()
         {
             if (_exitRequested) { _exitRequested = false; ExitToHub(); return; }
+            // A surface has no back gesture: Escape and right-click step the page back one level.
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)) Emit("editor.back", null);
             try { _session?.Tick(Time.realtimeSinceStartupAsDouble); }
             catch (Exception e) { Core.Log.Error("[editor] autosave failed: " + e.Message); }
 

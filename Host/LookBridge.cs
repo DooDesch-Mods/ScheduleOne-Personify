@@ -34,9 +34,14 @@ namespace Personify.Host
             {
                 ["path"] = o.Path, ["name"] = o.Display, ["group"] = o.Group ?? "", ["tint"] = PathCatalog.DefaultTint(o.Path) ?? "#FFFFFF",
             }));
-            var tattoos = new JArray(PathCatalog.Tattoos().Select(o => new JObject { ["path"] = o.Path, ["name"] = o.Display, ["group"] = o.Group ?? "" }));
+            // "group" tells the page which list a tattoo goes into; "category" is what the picker shows.
+            var tattoos = new JArray(PathCatalog.Tattoos().Select(o => new JObject
+            {
+                ["path"] = o.Path, ["name"] = o.Display, ["category"] = o.Group ?? "",
+                ["group"] = (o.Path ?? "").IndexOf("/Face/", StringComparison.OrdinalIgnoreCase) >= 0 ? "face" : "body",
+            }));
             foreach (var ink in InkorporatedCatalog.All())
-                tattoos.Add(new JObject { ["file"] = ink.PngPath, ["name"] = ink.Name, ["group"] = "Inkorporated: " + ink.Pack, ["kind"] = ink.IsFace ? "face" : "body" });
+                tattoos.Add(new JObject { ["file"] = ink.PngPath, ["name"] = ink.Name, ["category"] = "Inkorporated: " + ink.Pack, ["group"] = ink.IsFace ? "face" : "body" });
             return new JObject
             {
                 ["hair"] = List(PathCatalog.HairStyles()),

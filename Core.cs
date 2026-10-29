@@ -27,6 +27,7 @@ namespace Personify
             Project.ProjectLog.Error = m => Log.Error(m);
             Project.ProjectFiles.Root = Editor.Paths.Projects;
             Host.Localization.Register();
+            App.PhoneApp.Register();
 
             try
             {

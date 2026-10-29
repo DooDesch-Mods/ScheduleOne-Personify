@@ -71,10 +71,10 @@ namespace Personify.Project
             var ed = PackProject.EditorBlock(o);
 
             var a = d.Appearance ?? new AppearanceDraft();
-            var hidden = new JObject();
+            var hidden = new JArray();
             o["appearance"] = LookJson.FromDraft(a, hidden);
             if (hidden.Count > 0) ed["hiddenLayers"] = hidden;
-            ed["eyelidFollowsSkin"] = a.EyelidFollowsSkin;
+            if (!a.EyelidFollowsSkin) ed["eyelidsCustom"] = true;
 
             var b = d.Behavior;
             if (b != null)

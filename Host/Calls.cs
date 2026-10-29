@@ -69,9 +69,16 @@ namespace Personify.Host
             {
                 var o = Obj(a);
                 var ids = Ids(o);
-                string path = (string)o["path"];
-                Need().Set(ids, path, o["value"], EditorHost.Now);
-                EditorHost.Touched(ids, path);
+                var changes = new List<FieldChange>();
+                if (o["changes"] is JArray batch)
+                {
+                    foreach (var c in batch.OfType<JObject>())
+                        changes.Add(new FieldChange { Path = (string)c["path"], Value = c["value"], Unset = (bool?)c["unset"] == true });
+                }
+                else changes.Add(new FieldChange { Path = (string)o["path"], Value = o["value"] });
+                // Live values (a slider still moving) merge with the final write of the same paths into one undo step.
+                Need().Apply(ids, changes, EditorHost.Now);
+                foreach (var c in changes) EditorHost.Touched(ids, c.Path);
                 return Delta();
             });
             On("project.unset", a =>
@@ -209,6 +216,7 @@ namespace Personify.Host
 
             On("catalog.look", _ => LookBridge.Catalog());
             On("catalog.world", _ => WorldBridge.Catalog());
+            On("catalog.effects", _ => GameData.Effects());
             On("world.map", _ => WorldBridge.Map());
             On("world.ground", a => WorldBridge.Ground(Obj(a)));
 

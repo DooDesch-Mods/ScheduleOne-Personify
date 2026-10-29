@@ -35,6 +35,9 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const round = (v, d) => { const f = Math.pow(10, d === undefined ? 2 : d); return Math.round(v * f) / f; };
 const fmtNum = v => (typeof v === 'number' && isFinite(v) ? String(round(v, 2)) : '-');
 const pct = v => Math.round(v * 100) + ' %';
+const money = v => (st.lang === 'de' ? Math.round(v) + ' $' : '$' + Math.round(v));
+// The game's relation levels (RelationshipCategory.GetCategory): 1, 2, 3 and 4 are the steps.
+const relName = v => (v >= 4 ? 'Loyal' : v >= 3 ? 'Friendly' : v >= 2 ? 'Neutral' : v >= 1 ? 'Unfriendly' : 'Hostile');
 
 function rectOf(node) {
   try { return node && node.rect ? node.rect() : null; }
@@ -121,6 +124,8 @@ const st = {
   project: null, problems: [], install: 'not_installed', canUndo: false, canRedo: false,
   selection: [], active: null, area: 'look',
   look: null, world: null, map: null, effects: null,
+  faces: {},                // NPC id -> s1:// picture of the open project
+  wall: {},                 // project folder -> [{ id, name, face }] for the start screen
 };
 const ui = {
   screen: 'start', search: '', roleFilter: 'all',
@@ -273,14 +278,51 @@ function sweepInputs(root) {
   setTimeout(() => { sweepQueued = false; document.body.classList.toggle('swept'); }, 100);
 }
 
-function btn(label, cls, onClick) {
-  const b = el('div', cls ? 'btn ' + cls : 'btn', label);
+// A Lucide glyph from icons/ (white PNG, tinted by the stylesheet through `color`).
+function icon(name, cls) {
+  const i = el('img', 'lu' + (cls ? ' ' + cls : ''));
+  i.setAttribute('src', 'icons/' + name + '.png');
+  return i;
+}
+
+function btn(label, cls, onClick, ic) {
+  const b = el('div', cls ? 'btn ' + cls : 'btn', ic ? null : label);
+  if (ic) { b.appendChild(icon(ic)); b.appendChild(el('div', null, label)); }
   b.addEventListener('click', e => {
     if (e.stopPropagation) e.stopPropagation();
     if (b.classList.contains('off')) return;
     onClick(e);
   });
   return b;
+}
+
+// A square icon button with a hover hint.
+// An add button: plus icon and label, secondary.
+const addBtn = (label, cls, onClick) => btn(label, cls, onClick, 'plus');
+
+function ibtn(ic, hint, onClick, cls) {
+  const b = el('div', 'ib' + (cls ? ' ' + cls : ''));
+  b.appendChild(icon(ic));
+  b.addEventListener('click', e => {
+    if (e.stopPropagation) e.stopPropagation();
+    if (b.classList.contains('off')) return;
+    onClick(e);
+  });
+  if (hint) tip(b, hint);
+  return b;
+}
+
+const initials = name => {
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean);
+  return ((parts[0] || '?')[0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+};
+
+// A face tile: the initials, with the NPC's picture over them once the host has rendered one.
+function faceEl(name, url, cls) {
+  const f = el('div', 'face' + (cls ? ' ' + cls : ''));
+  f.appendChild(el('div', 'fi', initials(name)));
+  if (url) { const i = el('img'); i.setAttribute('src', url); f.appendChild(i); }
+  return f;
 }
 
 function textInput(value, placeholder, onCommit, opts) {
@@ -371,21 +413,31 @@ function segEl(options, value, onPick, cls) {
 let toastNode = null;
 function toast(text, tone) {
   if (toastNode) toastNode.remove();
-  toastNode = el('div', 'toast ' + (tone || 'info'), text);
+  toastNode = el('div', 'toast ' + (tone || 'info'));
+  if (tone === 'ok' || tone === 'bad' || tone === 'warn') {
+    const i = icon(tone === 'ok' ? 'check' : 'alert');
+    i.style.color = tone === 'ok' ? '#7CCB5B' : tone === 'bad' ? '#F1707A' : '#E8B24E';
+    toastNode.appendChild(i);
+  }
+  toastNode.appendChild(el('div', 'grow', text));
   document.body.appendChild(toastNode);
   const mine = toastNode;
   setTimeout(() => { if (toastNode === mine) { mine.remove(); toastNode = null; } }, 4200);
 }
 
 // A hover hint: mouseenter says when, rect() says where.
+// One tooltip at a time. A re-render removes its anchor without a mouseleave, so the ticker also drops a tooltip
+// whose anchor has left the document.
+let liveTip = null;
+function hideTip() { if (liveTip) { liveTip.node.remove(); liveTip = null; } }
 function tip(anchor, text) {
-  let node = null;
-  const hide = () => { if (node) { node.remove(); node = null; } };
+  const hide = () => { if (liveTip && liveTip.anchor === anchor) hideTip(); };
   anchor.addEventListener('mouseenter', () => {
-    if (node || !text) return;
+    if (!text) return;
+    hideTip();
     const r = rectOf(anchor);
     if (!r || !r.height) return;
-    node = el('div', 'tip', text);
+    const node = el('div', 'tip', text);
     const w = Math.min(320, 20 + text.length * 7);
     const vw = innerWidth || 1920;
     let left = Math.max(6, Math.min(vw - w - 6, r.x + r.width / 2 - w / 2));
@@ -393,6 +445,7 @@ function tip(anchor, text) {
     node.style.top = Math.round(r.y > 40 ? r.y - 34 : r.y + r.height + 6) + 'px';
     node.style.width = Math.round(w) + 'px';
     document.body.appendChild(node);
+    liveTip = { node, anchor };
   });
   anchor.addEventListener('mouseleave', hide);
   anchor.addEventListener('click', hide);
@@ -420,7 +473,7 @@ function dialogHead(box, title) {
   const h = el('div', 'dh');
   h.appendChild(el('div', 'dt', title));
   h.appendChild(el('div', 'sp'));
-  h.appendChild(btn(t('Close'), 'sm', closeDialog));
+  h.appendChild(ibtn('close', t('Close'), closeDialog, 'ghost'));
   box.appendChild(h);
 }
 
@@ -442,11 +495,14 @@ function openMenu(anchor, items) {
   const scrim = el('div', 'mscrim');
   scrim.addEventListener('click', e => { if (e.target === scrim) closeMenu(); });
   const m = el('div', 'menu');
-  m.style.left = Math.round(r.x) + 'px';
+  const vw = innerWidth || 1920;
+  m.style.left = Math.round(Math.min(r.x, vw - 270)) + 'px';
   m.style.top = Math.round(r.y + r.height + 6) + 'px';
   for (const it of items) {
     if (!it) { m.appendChild(el('div', 'msep')); continue; }
-    const row = el('div', 'mi' + (it.danger ? ' bad' : '') + (it.off ? ' off' : ''), it.label);
+    const row = el('div', 'mi' + (it.danger ? ' bad' : '') + (it.off ? ' off' : ''));
+    if (it.icon) row.appendChild(icon(it.icon));
+    row.appendChild(el('div', null, it.label));
     row.addEventListener('click', () => { if (it.off) return; closeMenu(); it.run(); });
     m.appendChild(row);
   }
@@ -604,9 +660,11 @@ function goStart() {
   ui.screen = 'start';
   ui.pick = null;
   E = null;
+  previewOf = null;
   setStageMode('none');
   st.projects = call('projects.list') || [];
   st.packs = call('packs.list') || [];
+  st.wall = call('faces.wall') || {};
   renderStart();
 }
 
@@ -617,6 +675,27 @@ const INSTALL_TEXT = {
 };
 const installTone = s => (s === 'installed' ? 'ok' : s === 'changed' ? 'warn' : 'mu');
 
+function statusBadge(state) {
+  const tone = installTone(state);
+  const b = el('div', 'badge ' + tone);
+  if (tone === 'ok') b.appendChild(icon('check'));
+  else if (tone === 'warn') b.appendChild(icon('alert'));
+  b.appendChild(el('div', null, t(INSTALL_TEXT[state] || INSTALL_TEXT.not_installed)));
+  return b;
+}
+
+const npcCount = n => (n === 1 ? t('1 NPC') : t('{n} NPCs', { n: n || 0 }));
+
+function deleteProject(p) {
+  confirmDialog(t('Delete {name}?', { name: p.name || p.folder }),
+    t('The project folder is removed; an installed pack stays in your game.'), t('Delete'), () => {
+      const res = call('projects.delete', p.folder);
+      if (!res || res.ok === false) toast(errText(res && res.error), 'bad');
+      else console.log('[personify] project ' + p.folder + ' deleted');
+      goStart();
+    }, true);
+}
+
 function renderStart() {
   const root = document.getElementById('app');
   sweepInputs(root);
@@ -624,73 +703,86 @@ function renderStart() {
   const page = el('div', 'start');
 
   const head = el('div', 'shead');
-  const ttl = el('div', 'stl');
-  ttl.appendChild(el('div', 'brand', 'Personify'));
-  ttl.appendChild(el('div', 'bsub', t('Build NPCs for Schedule I.')));
-  head.appendChild(ttl);
+  const brand = el('div', 'brand');
+  const word = el('img', 'word');
+  word.setAttribute('src', 'wordmark.png');
+  brand.appendChild(word);
+  brand.appendChild(el('div', 'bsub', t('Build NPCs for Schedule I.')));
+  head.appendChild(brand);
   head.appendChild(el('div', 'sp'));
-  head.appendChild(btn(t('Back to Side Hustle'), null, () => { if (!call('editor.exit')) toast(t('The editor host did not answer.'), 'bad'); }));
+  head.appendChild(btn(t('Back to Side Hustle'), null, () => { if (!call('editor.exit')) toast(t('The editor host did not answer.'), 'bad'); }, 'back'));
   page.appendChild(head);
 
   const cols = el('div', 'scols');
 
-  // Projects
-  const pc = el('div', 'card grow');
-  const ph = el('div', 'ch');
-  ph.appendChild(el('div', 'h', t('Projects')));
-  ph.appendChild(el('div', 'sp'));
-  ph.appendChild(btn(t('Import pack'), 'sm', importDialog));
-  ph.appendChild(btn(t('New project'), 'sm go', newProjectDialog));
-  pc.appendChild(ph);
-  const plist = el('div', 'scroll');
+  // The crew wall: one card per project, with its NPCs' faces.
+  const wall = el('div', 'wall');
+  const wh = el('div', 'wallh');
+  wh.appendChild(el('div', 'wallt', t('Projects')));
+  if (st.projects.length) wh.appendChild(el('div', 'wallc', String(st.projects.length)));
+  wh.appendChild(el('div', 'sp'));
+  wh.appendChild(btn(t('Import pack'), null, importDialog, 'import'));
+  wh.appendChild(btn(t('New project'), 'go', newProjectDialog, 'plus'));
+  wall.appendChild(wh);
+  const sc = el('div', 'scroll');
   if (st.projects.length === 0) {
     const empty = el('div', 'empty');
     empty.appendChild(el('div', 'emsg', t('No projects yet.')));
-    const acts = el('div', 'row gap');
-    acts.appendChild(btn(t('New project'), 'go', newProjectDialog));
-    acts.appendChild(btn(t('Import pack'), null, importDialog));
-    empty.appendChild(acts);
-    plist.appendChild(empty);
+    empty.appendChild(el('div', 'esub', t('A project holds your NPCs. Add it to your game when they are ready.')));
+    empty.appendChild(btn(t('New project'), 'go big', newProjectDialog, 'plus'));
+    sc.appendChild(empty);
   }
+  const grid = el('div', 'grid');
   for (const p of st.projects) {
-    const r = el('div', 'prow');
-    r.addEventListener('click', () => openProject(p.folder));
+    const c = el('div', 'pcard glass');
+    c.addEventListener('click', () => openProject(p.folder));
+    const crew = st.wall[p.folder] || [];
+    const faces = el('div', 'faces');
+    const shown = crew.length > 5 ? 4 : 5;
+    for (const x of crew.slice(0, shown)) faces.appendChild(faceEl(x.name, x.face));
+    if (crew.length > shown) faces.appendChild(el('div', 'more', '+' + (crew.length - shown)));
+    if (!crew.length) { const f = el('div', 'face'); f.appendChild(icon('user')); faces.appendChild(f); }
+    c.appendChild(faces);
     const tx = el('div', 'pt');
     tx.appendChild(el('div', 'pnm', p.name || p.folder));
-    tx.appendChild(el('div', 'psub', p.npcs === 1 ? t('1 NPC') : t('{n} NPCs', { n: p.npcs || 0 })));
-    r.appendChild(tx);
-    r.appendChild(el('div', 'pst ' + installTone(p.install), t(INSTALL_TEXT[p.install] || INSTALL_TEXT.not_installed)));
-    r.appendChild(btn(t('Delete'), 'sm', () => confirmDialog(t('Delete {name}?', { name: p.name || p.folder }),
-      t('The project folder is removed; an installed pack stays in your game.'), t('Delete'), () => {
-        const res = call('projects.delete', p.folder);
-        if (!res || res.ok === false) toast(errText(res && res.error), 'bad');
-        else console.log('[personify] project ' + p.folder + ' deleted');
-        goStart();
-      }, true)));
-    r.appendChild(btn(t('Open'), 'sm go', () => openProject(p.folder)));
-    plist.appendChild(r);
+    tx.appendChild(el('div', 'psub', npcCount(p.npcs)));
+    c.appendChild(tx);
+    const f = el('div', 'pcf');
+    f.appendChild(statusBadge(p.install));
+    f.appendChild(el('div', 'sp'));
+    const mb = ibtn('more', t('More'), () => openMenu(mb, [
+      { label: t('Open'), icon: 'chev-right', run: () => openProject(p.folder) },
+      null,
+      { label: t('Delete'), icon: 'trash', danger: true, run: () => deleteProject(p) },
+    ]), 'ghost');
+    f.appendChild(mb);
+    c.appendChild(f);
+    grid.appendChild(c);
   }
-  pc.appendChild(plist);
-  cols.appendChild(pc);
+  sc.appendChild(grid);
+  wall.appendChild(sc);
+  cols.appendChild(wall);
 
   // Installed packs
-  const kc = el('div', 'card packs');
-  const kh = el('div', 'ch');
-  kh.appendChild(el('div', 'h', t('Installed packs')));
-  kc.appendChild(kh);
+  const kc = el('div', 'packs glass');
+  const kt = el('div', 'khd');
+  kt.appendChild(el('div', 'kh', t('Installed packs')));
+  kt.appendChild(el('div', 'khs', t('A switch takes effect at the next save load.')));
+  kc.appendChild(kt);
   const klist = el('div', 'scroll');
   if (st.packs.length === 0) klist.appendChild(el('div', 'quiet', t('No NPC packs installed.')));
   for (const k of st.packs) {
-    const r = el('div', 'krow');
+    const r = el('div', 'krow' + (k.enabled ? '' : ' off'));
     const tx = el('div', 'pt');
     tx.appendChild(el('div', 'pnm', k.name || k.folder));
     const bits = [];
     if (k.version) bits.push('v' + k.version);
     if (k.author) bits.push(t('by {author}', { author: k.author }));
-    bits.push(k.npcs === 1 ? t('1 NPC') : t('{n} NPCs', { n: k.npcs || 0 }));
+    bits.push(npcCount(k.npcs));
     tx.appendChild(el('div', 'psub', bits.join(' · ')));
     if (k.ownProject) tx.appendChild(el('div', 'ptag', t('From your project')));
     r.appendChild(tx);
+    const state = el('div', 'kst' + (k.enabled ? ' on' : ''), k.enabled ? t('On') : t('Off'));
     r.appendChild(sw(!!k.enabled, on => {
       const res = call('packs.toggle', { folder: k.folder, enabled: on });
       if (!res || res.ok === false) { toast(errText(res && res.error), 'bad'); goStart(); return; }
@@ -698,14 +790,21 @@ function renderStart() {
       // Personnel reads packs when a save loads, so the switch takes effect there.
       toast(on ? t('Pack on from the next save load.') : t('Pack off from the next save load.'), 'info');
       k.enabled = on;
+      state.textContent = on ? t('On') : t('Off');
+      setCls(state, 'on', on);
+      setCls(r, 'off', !on);
     }));
-    r.appendChild(btn(t('Remove'), 'sm', () => confirmDialog(t('Remove {name}?', { name: k.name || k.folder }),
-      t('Saves that contain these NPCs lose them the next time they load.'), t('Remove'), () => {
-        const res = call('packs.remove', k.folder);
-        if (!res || res.ok === false) toast(errText(res && res.error), 'bad');
-        else { console.log('[personify] pack ' + k.folder + ' removed'); toast(t('Pack removed.'), 'ok'); }
-        goStart();
-      }, true)));
+    r.appendChild(state);
+    const mb = ibtn('more', t('More'), () => openMenu(mb, [
+      { label: t('Remove'), icon: 'trash', danger: true, run: () => confirmDialog(t('Remove {name}?', { name: k.name || k.folder }),
+        t('Saves that contain these NPCs lose them the next time they load.'), t('Remove'), () => {
+          const res = call('packs.remove', k.folder);
+          if (!res || res.ok === false) toast(errText(res && res.error), 'bad');
+          else { console.log('[personify] pack ' + k.folder + ' removed'); toast(t('Pack removed.'), 'ok'); }
+          goStart();
+        }, true) },
+    ]), 'ghost');
+    r.appendChild(mb);
     klist.appendChild(r);
   }
   kc.appendChild(klist);
@@ -751,7 +850,7 @@ function newProjectDialog() {
 
 function importDialog() {
   st.importable = call('projects.importable') || [];
-  const box = openDialog('tall');
+  const box = openDialog('fit');
   dialogHead(box, t('Import pack'));
   box.appendChild(el('div', 'dsub', t('Installed Personnel packs and zips from UserData/Personify/Import.')));
   const list = el('div', 'scroll');
@@ -763,7 +862,7 @@ function importDialog() {
     tx.appendChild(el('div', 'psub', (it.kind === 'zip' ? t('Zip file') : t('Installed pack')) + ' · ' +
       (it.npcs === 1 ? t('1 NPC') : t('{n} NPCs', { n: it.npcs || 0 }))));
     r.appendChild(tx);
-    r.appendChild(btn(t('Import'), 'sm go', () => {
+    r.appendChild(btn(t('Import'), 'sm', () => {
       const res = call('projects.import', it.path);
       if (!res || res.ok === false) { toast(errText(res && res.error), 'bad'); return; }
       const folders = res.folders || [];
@@ -795,8 +894,13 @@ function openProject(folder) {
   st.world = call('catalog.world') || { hasWorld: false, buildings: [], regions: [], npcs: [], items: [] };
   st.effects = call('catalog.effects') || [];
   st.map = null;
+  st.faces = {};
+  // The host forgets the shown NPC when a project opens; the page must ask again even for the same id.
+  previewOf = null;
+  stageRectSent = '';
   buildEditor();
   applyState(ps);
+  loadFaces();
   console.log('[personify] opened ' + folder + ' with ' + npcs().length + ' NPCs');
 }
 
@@ -810,31 +914,39 @@ function buildEditor() {
   lists.clear();
   E = {};
   const ed = el('div', 'ed');
-  E.top = el('div', 'topbar');
-  ed.appendChild(E.top);
-
-  const mid = el('div', 'mid');
-  E.side = el('div', 'side');
+  // The stage first, so the panels and the pipeline bar lie over it.
   E.stage = el('div', 'stage');
   E.stage.id = 'stage';
-  E.fields = el('div', 'fields');
-  mid.appendChild(E.side);
-  mid.appendChild(E.stage);
-  mid.appendChild(E.fields);
-  ed.appendChild(mid);
-
+  ed.appendChild(E.stage);
+  E.side = el('div', 'side glass');
+  ed.appendChild(E.side);
+  E.fields = el('div', 'fields glass');
+  ed.appendChild(E.fields);
   E.foot = el('div', 'foot');
   ed.appendChild(E.foot);
   root.appendChild(ed);
 
   buildSide();
   wireStage();
+  E.tabs = el('div', 'tabs');
   E.fhead = el('div', 'fhead');
   E.fscroll = el('div', 'fscroll');
   E.fbody = el('div', 'fbody');
   E.fscroll.appendChild(E.fbody);
+  E.ffoot = el('div', 'ffoot');
+  E.fields.appendChild(E.tabs);
   E.fields.appendChild(E.fhead);
   E.fields.appendChild(E.fscroll);
+  E.fields.appendChild(E.ffoot);
+}
+
+// The open project's faces as s1:// pictures. Missing ones are rendered by the host and arrive with "faces.ready".
+function loadFaces() {
+  const r = call('faces.capture');
+  if (!r || r.ok === false) { console.warn('[personify] faces.capture failed, the list shows initials'); return; }
+  st.faces = r.faces || {};
+  if (r.pending) console.log('[personify] ' + r.pending + ' face(s) are being rendered');
+  if (ui.screen === 'editor') { renderList(); renderFields(); }
 }
 
 function renderEditor() {
@@ -850,35 +962,44 @@ function renderEditor() {
 
 function renderTop() {
   if (!E) return;
-  const top = E.top;
-  top.replaceChildren();
-  const pm = el('div', 'pmenu');
+  // Side head: wordmark, the project with its menu, undo and redo.
+  const sh = E.shead;
+  sh.replaceChildren();
+  const word = el('img', 'word');
+  word.setAttribute('src', 'wordmark.png');
+  sh.appendChild(word);
+  sh.appendChild(el('div', 'sp'));
+  sh.appendChild(ibtn('undo', t('Undo') + '  Ctrl+Z', undo, 'ghost' + (st.canUndo ? '' : ' off')));
+  sh.appendChild(ibtn('redo', t('Redo') + '  Ctrl+Y', redo, 'ghost' + (st.canRedo ? '' : ' off')));
+  const pm = E.pmenu;
+  pm.replaceChildren();
   pm.appendChild(el('div', 'pmn', (st.project && st.project.name) || t('Project')));
-  pm.appendChild(el('div', 'pmc', t('Menu')));
-  pm.addEventListener('click', () => openMenu(pm, [
-    { label: t('Pack settings'), run: packDialog },
-    { label: t('History'), run: historyDialog },
-    { label: t('Publish'), run: publish },
-    st.install !== 'not_installed' ? { label: t('Remove from my game'), run: uninstall, danger: true } : null,
-    null,
-    { label: t('Back to projects'), run: goStart },
-  ].filter((x, i, a) => x !== null || (i > 0 && a[i - 1] !== null))));
-  top.appendChild(pm);
+  pm.appendChild(icon('chev-down'));
 
-  const tabs = el('div', 'tabs');
+  const tabs = E.tabs;
+  tabs.replaceChildren();
   for (const [id, label] of AREAS) {
     const tb = el('div', st.area === id ? 'tab on' : 'tab', t(label));
     tb.addEventListener('click', () => setArea(id));
     tabs.appendChild(tb);
   }
-  top.appendChild(tabs);
-  top.appendChild(el('div', 'sp'));
-  top.appendChild(btn(t('Undo'), 'sm' + (st.canUndo ? '' : ' off'), undo));
-  top.appendChild(btn(t('Redo'), 'sm' + (st.canRedo ? '' : ' off'), redo));
-  const ex = el('div', 'extog');
-  ex.appendChild(el('div', 'exl', t('Expert')));
-  ex.appendChild(sw(st.expert, on => setExpert(on)));
-  top.appendChild(ex);
+
+  const ff = E.ffoot;
+  ff.replaceChildren();
+  ff.appendChild(sw(st.expert, on => setExpert(on)));
+  ff.appendChild(el('div', 'exl', t('Expert')));
+  ff.appendChild(el('div', 'exs', t('Shows numbers and every field.')));
+}
+
+function projectMenu() {
+  openMenu(E.pmenu, [
+    { label: t('Pack settings'), icon: 'settings', run: packDialog },
+    { label: t('History'), icon: 'history', run: historyDialog },
+    { label: t('Publish'), icon: 'publish', run: publish },
+    st.install !== 'not_installed' ? { label: t('Remove from my game'), icon: 'trash', run: uninstall, danger: true } : null,
+    null,
+    { label: t('Back to projects'), icon: 'back', run: goStart },
+  ].filter((x, i, a) => x !== null || (i > 0 && a[i - 1] !== null)));
 }
 
 function setArea(id) {
@@ -939,7 +1060,7 @@ function packDialog() {
 
 function historyDialog() {
   const list = call('project.history') || [];
-  const box = openDialog('tall');
+  const box = openDialog('fit');
   dialogHead(box, t('History'));
   const sc = el('div', 'scroll');
   if (list.length === 0) sc.appendChild(el('div', 'quiet', t('No saved versions yet.')));
@@ -962,7 +1083,9 @@ function fmtDate(utc) {
   const d = new Date(utc);
   if (isNaN(d.getTime())) return String(utc);
   const p = n => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  const hm = p(d.getHours()) + ':' + p(d.getMinutes());
+  if (st.lang === 'de') return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + hm;
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + hm;
 }
 
 function publish() {
@@ -994,16 +1117,21 @@ function uninstall() {
 
 function buildSide() {
   const side = E.side;
-  const search = textInput(ui.search, t('Search NPCs'), () => {}, {
+  E.shead = el('div', 'shd');
+  side.appendChild(E.shead);
+  E.pmenu = el('div', 'pmenu');
+  E.pmenu.addEventListener('click', projectMenu);
+  side.appendChild(E.pmenu);
+  const find = el('div', 'find');
+  find.appendChild(textInput(ui.search, t('Search NPCs'), () => {}, {
     cls: 'search', onInput: v => { ui.search = v; renderList(true); },
-  });
-  side.appendChild(search);
-  const filt = selectEl([['all', t('All roles')]].concat(ROLES.map(([v, l]) => [v, t(l)])), ui.roleFilter,
-    v => { ui.roleFilter = v; renderList(true); }, { cls: 'rolef' });
-  side.appendChild(filt);
+  }));
+  find.appendChild(selectEl([['all', t('All roles')]].concat(ROLES.map(([v, l]) => [v, t(l)])), ui.roleFilter,
+    v => { ui.roleFilter = v; renderList(true); }, { cls: 'rolef' }));
+  side.appendChild(find);
   E.selbar = el('div', 'selbar');
   side.appendChild(E.selbar);
-  npcVl = vlist({ rowH: 48, cls: 'npcs', guess: 560, build: npcRow, empty: () => t('No NPC matches.') });
+  npcVl = vlist({ rowH: 60, cls: 'npcs', guess: 560, build: npcRow, empty: () => t('No NPC matches.') });
   side.appendChild(npcVl.box);
   E.sideActs = el('div', 'sacts');
   side.appendChild(E.sideActs);
@@ -1030,10 +1158,7 @@ function npcRow(n) {
   const checked = multi() && st.selection.indexOf(n.id) >= 0;
   const r = el('div', 'nr' + (on ? ' on' : '') + (checked ? ' chk' : ''));
   r.addEventListener('click', () => setActive(n.id));
-  const cb = el('div', 'cb' + (checked ? ' on' : ''));
-  cb.appendChild(el('div', 'cbi'));
-  cb.addEventListener('click', e => { if (e.stopPropagation) e.stopPropagation(); toggleCheck(n.id); });
-  r.appendChild(cb);
+  r.appendChild(faceEl(n.name || n.id, st.faces[n.id]));
   const tx = el('div', 'nt');
   tx.appendChild(el('div', 'nn', n.name || n.id || t('Unnamed')));
   tx.appendChild(el('div', 'ns', roleLabel(roleOf(n))));
@@ -1041,6 +1166,11 @@ function npcRow(n) {
   const pr = problemsOf(n);
   if (pr.e) r.appendChild(el('div', 'nb bad', String(pr.e)));
   else if (pr.w) r.appendChild(el('div', 'nb warn', String(pr.w)));
+  const cb = el('div', 'cb' + (checked ? ' on' : ''));
+  cb.appendChild(el('div', 'cbi'));
+  cb.addEventListener('click', e => { if (e.stopPropagation) e.stopPropagation(); toggleCheck(n.id); });
+  tip(cb, t('Select several'));
+  r.appendChild(cb);
   return r;
 }
 
@@ -1053,7 +1183,7 @@ function renderList(reset) {
     E.selbar.appendChild(el('div', 'selt', t('{n} selected', { n: st.selection.length })));
     E.selbar.appendChild(el('div', 'sp'));
     E.selbar.appendChild(btn(t('Clear'), 'xs', () => { st.selection = st.active ? [st.active] : []; selectionChanged(); }));
-  } else if (list.length > 1) {
+  } else if (list.length > 1 && (ui.search.trim() || ui.roleFilter !== 'all')) {
     E.selbar.appendChild(el('div', 'sp'));
     E.selbar.appendChild(btn(t('Select all shown'), 'xs', () => {
       st.selection = list.map(n => n.id);
@@ -1061,20 +1191,21 @@ function renderList(reset) {
       selectionChanged();
     }));
   }
+  E.selbar.style.display = E.selbar.children.length ? 'flex' : 'none';
   const acts = E.sideActs;
   acts.replaceChildren();
-  acts.appendChild(btn(t('+ New NPC'), 'go', wizard));
-  const row = el('div', 'row gap');
   if (multi()) {
-    row.appendChild(btn(t('Remove {n}', { n: st.selection.length }), 'sm grow', () => removeNpcs(st.selection.slice())));
-  } else if (st.active) {
-    row.appendChild(btn(t('Duplicate'), 'sm grow', () => {
+    acts.appendChild(btn(t('Remove {n}', { n: st.selection.length }), 'bad grow', () => removeNpcs(st.selection.slice()), 'trash'));
+    return;
+  }
+  acts.appendChild(btn(t('New NPC'), 'grow', wizard, 'plus'));
+  if (st.active) {
+    acts.appendChild(ibtn('copy', t('Duplicate'), () => {
       const ps = call('npc.duplicate', { id: st.active });
       if (applyState(ps)) console.log('[personify] duplicated ' + st.active);
     }));
-    row.appendChild(btn(t('Remove'), 'sm grow', () => removeNpcs([st.active])));
+    acts.appendChild(ibtn('trash', t('Remove'), () => removeNpcs([st.active])));
   }
-  acts.appendChild(row);
 }
 
 function removeNpcs(ids) {
@@ -1125,24 +1256,29 @@ function renderFoot() {
   if (!E) return;
   const f = E.foot;
   f.replaceChildren();
+  const bar = el('div', 'fbar glass');
   const c = counts();
   const pb = el('div', 'probs' + (c.e ? ' bad' : c.w ? ' warn' : ' ok') + (ui.problemsOpen ? ' open' : ''));
   const parts = [];
   if (c.e) parts.push(c.e === 1 ? t('1 error') : t('{n} errors', { n: c.e }));
   if (c.w) parts.push(c.w === 1 ? t('1 warning') : t('{n} warnings', { n: c.w }));
-  pb.appendChild(el('div', 'pbt', parts.length ? parts.join(' · ') : t('No problems')));
-  if (parts.length) pb.appendChild(el('div', 'pbc', ui.problemsOpen ? t('Hide') : t('Show')));
-  pb.addEventListener('click', () => { if (!st.problems.length) return; ui.problemsOpen = !ui.problemsOpen; renderFoot(); });
-  f.appendChild(pb);
-  f.appendChild(el('div', 'sp'));
-  f.appendChild(el('div', 'ist ' + installTone(st.install), t(INSTALL_TEXT[st.install] || INSTALL_TEXT.not_installed)));
-  const tb = btn(t('Test'), 'big', testDialog);
+  pb.appendChild(icon(parts.length ? 'alert' : 'check'));
+  pb.appendChild(el('div', null, parts.length ? parts.join(' · ') : t('Ready')));
+  if (parts.length) {
+    pb.appendChild(icon(ui.problemsOpen ? 'chev-down' : 'chev-right'));
+    pb.addEventListener('click', () => { ui.problemsOpen = !ui.problemsOpen; renderFoot(); });
+  }
+  bar.appendChild(pb);
+  bar.appendChild(statusBadge(st.install));
+  bar.appendChild(el('div', 'fdiv'));
+  const tb = btn(t('Test'), 'big', testDialog, 'play');
   if (!st.active) tb.classList.add('off');
-  f.appendChild(tb);
+  bar.appendChild(tb);
   const label = st.install === 'changed' ? t('Update') : st.install === 'installed' ? t('Up to date') : t('Add to my game');
-  const ib = btn(label, 'big go' + (c.e ? ' off' : st.install === 'installed' ? ' quietgo' : ''), doInstall);
+  const ib = btn(label, 'big ' + (c.e ? 'off' : st.install === 'installed' ? 'quietgo' : 'go'), doInstall, 'install');
   if (c.e) tip(ib, t('Fix the errors first.'));
-  f.appendChild(ib);
+  bar.appendChild(ib);
+  f.appendChild(bar);
   renderProblems();
 }
 
@@ -1150,7 +1286,7 @@ let probNode = null;
 function renderProblems() {
   if (probNode) { probNode.remove(); probNode = null; }
   if (!ui.problemsOpen || !st.problems.length) return;
-  const box = el('div', 'plist');
+  const box = el('div', 'plist glass');
   const sorted = st.problems.slice().sort((a, b) => (a.severity === b.severity ? 0 : a.severity === 'error' ? -1 : 1));
   for (const p of sorted) {
     const r = el('div', 'pli ' + (p.severity === 'error' ? 'bad' : 'warn'));
@@ -1194,16 +1330,22 @@ function doInstall() {
 
 function testDialog() {
   if (!st.active) return;
-  const saves = call('test.saves') || [];
+  const saves = (call('test.saves') || []).slice().sort((a, b) =>
+    (b.newest ? 1 : 0) - (a.newest ? 1 : 0) || String(b.lastPlayed || '').localeCompare(String(a.lastPlayed || '')) || a.slot - b.slot);
   const box = openDialog('medium');
-  dialogHead(box, t('Test {name}', { name: (npcById(st.active) || {}).name || st.active }));
-  box.appendChild(el('div', 'dsub', t('The game restarts, loads the save and puts you next to the NPC.')));
-  let pick = (saves.find(s => s.newest) || saves[0] || {}).slot;
+  const name = (npcById(st.active) || {}).name || st.active;
+  dialogHead(box, t('Test {name} in a save', { name }));
+  const warn = el('div', 'warnl');
+  warn.appendChild(icon('restart'));
+  warn.appendChild(el('div', 'grow', t('The game restarts, loads the save and puts you next to the NPC.')));
+  box.appendChild(warn);
+  let pick = (saves[0] || {}).slot;
   const list = el('div', 'saves');
   const rows = [];
   if (saves.length === 0) list.appendChild(el('div', 'quiet', t('No save found.')));
   for (const s of saves) {
     const r = el('div', 'sv' + (s.slot === pick ? ' on' : ''));
+    r.appendChild(el('div', 'svn', String(s.slot)));
     const tx = el('div', 'pt');
     tx.appendChild(el('div', 'pnm', s.name || t('Save {n}', { n: s.slot })));
     const sub = [];
@@ -1223,14 +1365,14 @@ function testDialog() {
   const acts = el('div', 'dacts');
   acts.appendChild(el('div', 'sp'));
   acts.appendChild(btn(t('Cancel'), null, closeDialog));
-  acts.appendChild(btn(t('Start test'), 'go' + (saves.length ? '' : ' off'), () => {
+  acts.appendChild(btn(t('Restart and test'), 'go' + (saves.length ? '' : ' off'), () => {
     if (counts().e) { err.textContent = t('Fix the errors first.'); err.style.display = 'flex'; return; }
     const r = call('test.start', { slot: pick, npcId: st.active });
     if (!r || r.ok === false) { err.textContent = errText(r && r.error); err.style.display = 'flex'; console.error('[personify] test.start failed: ' + (r && r.error)); return; }
     console.log('[personify] test started in save ' + pick + ' for ' + st.active);
     closeDialog();
     toast(t('The game restarts with the test.'), 'ok');
-  }));
+  }, 'play'));
   box.appendChild(acts);
 }
 
@@ -1261,15 +1403,30 @@ function renderStage() {
   else { E.stage.replaceChildren(); mapNodes = null; }
 }
 
+// The preview camera draws the whole screen behind the panels, so the stage rect sent to the host is the viewport.
+// The map (Routine) lives in the stage element between the panels.
 function reportStage() {
   if (!E || ui.screen !== 'editor') return;
   const r = rectOf(E.stage);
   if (!r || !r.width) return;
-  const rect = { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
+  const vw = innerWidth || 0, vh = innerHeight || 0;
+  const rect = vw && vh ? { x: 0, y: 0, width: Math.round(vw), height: Math.round(vh) }
+    : { x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height) };
   const key = JSON.stringify(rect);
   if (key === stageRectSent) return;
   stageRectSent = key;
   if (!call('stage.rect', rect)) console.warn('[personify] stage.rect not taken');
+}
+
+// The map follows the stage element's own size.
+let stageBox = '';
+function watchStageBox() {
+  if (!E || ui.screen !== 'editor') return;
+  const r = rectOf(E.stage);
+  if (!r || !r.width) return;
+  const key = Math.round(r.width) + 'x' + Math.round(r.height);
+  if (key === stageBox) return;
+  stageBox = key;
   if (st.area === 'routine' && mapNodes) { mapNodes.fitted = false; layoutMap(); }
 }
 
@@ -1426,6 +1583,26 @@ function placeNear(x, z, kinds, radius) {
     if (d <= bd) { bd = d; best = p; }
   }
   return best;
+}
+
+// Where a point is, for the reader: the nearest building or car park within 60 m, coordinates in Expert mode.
+function whereIs(x, y, z) {
+  if (st.expert) return fmtNum(x) + ', ' + fmtNum(y) + ', ' + fmtNum(z);
+  let best = null, bd = 60 * 60;
+  for (const p of (st.map && st.map.places) || []) {
+    if (p.kind === 'seat') continue;
+    const d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best ? t('Near {p}', { p: best.label || best.name }) : t('Set on the map');
+}
+
+function placeLine(row, text, button) {
+  row.classList.add('stack');
+  const line = el('div', 'placel');
+  line.appendChild(el('div', 'fv grow', text));
+  line.appendChild(button);
+  row.appendChild(line);
 }
 
 function placeByName(kind, name) {
@@ -1597,21 +1774,26 @@ function renderFields() {
   const n = npcById(st.active);
   if (!n) {
     E.fbody.appendChild(el('div', 'quiet pad', t('No NPC yet.')));
-    E.fbody.appendChild(btn(t('+ New NPC'), 'go', wizard));
+    E.fbody.appendChild(btn(t('New NPC'), 'go', wizard, 'plus'));
     return;
   }
   if (multi()) {
-    E.fhead.appendChild(el('div', 'fht', t('{n} NPCs selected', { n: st.selection.length })));
-    E.fhead.appendChild(el('div', 'fhs', t('Changes apply to all selected NPCs.')));
+    const tx = el('div', 'nt');
+    tx.appendChild(el('div', 'fht', t('{n} NPCs selected', { n: st.selection.length })));
+    tx.appendChild(el('div', 'fhs', t('Changes apply to all selected NPCs.')));
+    E.fhead.appendChild(tx);
   } else {
-    E.fhead.appendChild(textInput(n.name || '', t('Name'), v => {
+    E.fhead.appendChild(faceEl(n.name || n.id, st.faces[n.id], 'big'));
+    const tx = el('div', 'nt');
+    tx.appendChild(textInput(n.name || '', t('Name'), v => {
       const name = v.trim();
       if (!name) { toast(t('Enter a name.'), 'bad'); renderFields(); return; }
       write([{ path: 'name', value: name }]);
     }, { cls: 'nameinp' }));
     const sub = el('div', 'fhs');
     sub.textContent = roleLabel(roleOf(n)) + (st.expert ? ' · ' + n.id : '');
-    E.fhead.appendChild(sub);
+    tx.appendChild(sub);
+    E.fhead.appendChild(tx);
   }
   const box = E.fbody;
   if (st.area === 'look') buildLook(box, n);
@@ -1645,21 +1827,22 @@ function setSection(sec, open) {
   const body = sec.querySelector('.secb');
   if (body) body.style.display = open ? 'flex' : 'none';
   const mark = sec.querySelector('.secm');
-  if (mark) mark.textContent = open ? '-' : '+';
+  if (mark) mark.setAttribute('src', 'icons/' + (open ? 'chev-down' : 'chev-right') + '.png');
   const id = sec.getAttribute('data-sec');
   if (!ui.open[st.area]) ui.open[st.area] = {};
   ui.open[st.area][id] = open;
 }
 
-function section(box, id, title, build, defOpen) {
+// `sum` is a short text of the section's current values, shown in its head while it is closed.
+function section(box, id, title, build, defOpen, sum) {
   const area = ui.open[st.area] || (ui.open[st.area] = {});
   const open = area[id] !== undefined ? area[id] : !!defOpen;
   const sec = el('div', 'sec' + (open ? ' open' : ''));
   sec.setAttribute('data-sec', id);
   const h = el('div', 'sech');
   h.appendChild(el('div', 'secn', t(title)));
-  h.appendChild(el('div', 'sp'));
-  h.appendChild(el('div', 'secm', open ? '-' : '+'));
+  h.appendChild(el('div', 'secs', sum || ''));
+  h.appendChild(icon(open ? 'chev-down' : 'chev-right', 'secm'));
   h.addEventListener('click', () => setSection(sec, !sec.classList.contains('open')));
   sec.appendChild(h);
   const body = el('div', 'secb');
@@ -1682,7 +1865,8 @@ function line(box, text, cls) { const n = el('div', 'note' + (cls ? ' ' + cls : 
 function mixedTag(row) { row.appendChild(el('div', 'mxt', t('Mixed'))); }
 const live = () => st.area === 'look';
 
-// A numeric slider. o: { min, max, step, def, xmin, xmax (expert range), whole, fmt, parse, store, pair, extra }.
+// A numeric slider. o: { min, max, step, def, xmin, xmax (expert range), whole, fmt, parse, store, pair, extra, ends }.
+// `ends` is [low, high]: outside Expert the row shows these words at the rail ends instead of a number.
 // `pair` is [otherPath, otherDef]: the other end of a min/max range is written with it while it is still unset,
 // because Personnel fills a missing end with the other one.
 function slider(box, label, path, o) {
@@ -1698,6 +1882,7 @@ function slider(box, label, path, o) {
   if (v > max) max = v;
   const step = o.step || (o.whole ? 1 : 0.01);
   const fmt = o.fmt || fmtNum;
+  const plain = !!o.ends && !st.expert;
   const row = frow(box, label, paths[0]);
   const rng = el('input', 'rng');
   rng.setAttribute('type', 'range');
@@ -1705,7 +1890,18 @@ function slider(box, label, path, o) {
   rng.setAttribute('max', String(max));
   rng.setAttribute('step', String(step));
   rng.value = String(v);
-  row.appendChild(rng);
+  if (plain) {
+    row.classList.add('sl');
+    const head = el('div', 'slh');
+    head.appendChild(row.firstChild);
+    if (f.mixed) mixedTag(head);
+    row.appendChild(head);
+    const rail = el('div', 'slr');
+    rail.appendChild(el('div', 'end', t(o.ends[0])));
+    rail.appendChild(rng);
+    rail.appendChild(el('div', 'end r', t(o.ends[1])));
+    row.appendChild(rail);
+  } else row.appendChild(rng);
   const out = x => { const y = o.whole ? Math.round(x) : round(x, o.dec === undefined ? 2 : o.dec); return o.store ? o.store(y) : y; };
   const changes = x => {
     const val = out(x);
@@ -1714,8 +1910,10 @@ function slider(box, label, path, o) {
     if (o.extra) for (const e of o.extra(val)) ch.push(e);
     return ch;
   };
-  let shown;
-  if (st.expert && !o.noType) {
+  let shown = null;
+  if (plain) {
+    // No number outside Expert; the thumb position says it.
+  } else if (st.expert && !o.noType) {
     shown = textInput(f.mixed ? '' : String(round(v, 3)), f.mixed ? t('Mixed') : '', s => {
       const x = Number(String(s).replace(',', '.'));
       if (!isFinite(x)) { toast(t('Enter a number.'), 'bad'); return; }
@@ -1725,9 +1923,9 @@ function slider(box, label, path, o) {
   } else {
     shown = el('div', 'fv' + (f.unset ? ' def' : ''), f.mixed ? t('Mixed') : fmt(v));
   }
-  row.appendChild(shown);
+  if (shown) row.appendChild(shown);
   let lastLive = 0;
-  const show = x => { if (shown.tagName === 'INPUT') shown.value = String(round(x, 3)); else { shown.textContent = fmt(x); shown.classList.remove('def'); } };
+  const show = x => { if (!shown) return; if (shown.tagName === 'INPUT') shown.value = String(round(x, 3)); else { shown.textContent = fmt(x); shown.classList.remove('def'); } };
   rng.addEventListener('input', e => {
     const x = Number(valueOf(e));
     show(x);
@@ -1826,6 +2024,37 @@ const nameOfPath = p => {
   const i = p.lastIndexOf('/');
   return (i >= 0 ? p.slice(i + 1) : p).replace(/_/g, ' ');
 };
+// What a closed Look section holds, so the panel reads without opening every section.
+function slotNames(ap, list, keys) {
+  const arr = ap[list] || [];
+  const out = [];
+  for (const k of keys) {
+    const set = pathSet(catalog(k));
+    const l = arr.find(x => x && set.has(x.path));
+    if (l) out.push(plainName(nameOfPath(l.path)));
+  }
+  return out.length ? out.join(', ') : t('None');
+}
+// Catalog names are asset names ("FacialHair Stubble", "FlannelButtonUp"): the category word goes, words get spaces.
+const plainName = x => {
+  const i = x.lastIndexOf(' ');
+  return (i >= 0 ? x.slice(i + 1) : x).replace(/([a-z])([A-Z])/g, '$1 $2');
+};
+const num = (v, d) => (typeof v === 'number' ? v : d);
+function eyesSummary(ap) {
+  const lid = num(ap.leftEye && ap.leftEye.top, 0.5);
+  const out = [t(lid < 0.3 ? 'Sleepy' : lid > 0.7 ? 'Wide open' : 'Normal')];
+  if (num(ap.pupilDilation, 1) < 0.6) out.push(t('small pupils'));
+  return out.join(', ');
+}
+function browsSummary(ap) {
+  const th = num(ap.eyebrowThickness, 1), h = num(ap.eyebrowRestingHeight, 0);
+  const out = [];
+  if (th < 0.7) out.push(t('Thin')); else if (th > 1.4) out.push(t('Thick'));
+  if (h < -0.3) out.push(t('Low')); else if (h > 0.3) out.push(t('High'));
+  return out.length ? out.join(', ') : t('Normal');
+}
+const countOf = (n, one, many) => (n === 0 ? t('None') : n === 1 ? t(one) : t(many, { n }));
 const asItems = list => list.map(o => ({ value: o.path, label: o.name || nameOfPath(o.path), group: o.group }));
 const tintOf = l => (l && (l.tint || l.color)) || '#FFFFFF';
 
@@ -1841,7 +2070,7 @@ function buildLook(box, n) {
   const acts = el('div', 'acts');
   acts.appendChild(btn(t('Random look'), 'sm', () => {
     if (applyState(call('npc.randomLook', { id: n.id }))) { previewOf = null; renderStage(); console.log('[personify] random look for ' + n.id); }
-  }));
+  }, 'dice'));
   acts.appendChild(btn(n.portrait ? t('New contact picture') : t('Contact picture'), 'sm', () => {
     const d = call('portrait.capture', n.id);
     if (!d || d.ok === false) { toast(errText(d && d.error), 'bad'); return; }
@@ -1852,36 +2081,40 @@ function buildLook(box, n) {
     else if (!d.portrait) console.warn('[personify] portrait.capture answered without a portrait path');
     console.log('[personify] contact picture taken for ' + n.id);
     toast(t('Contact picture saved.'), 'ok');
+    // The list face follows the new contact picture.
+    loadFaces();
     renderFields();
-  }));
+  }, 'camera'));
   box.appendChild(acts);
 
   const skinExtra = v => (n.personify && n.personify.eyelidsCustom ? [] :
     [{ path: 'appearance.leftEyeLidColor', value: v }, { path: 'appearance.rightEyeLidColor', value: v }]);
 
+  const ap = n.appearance || {};
+  const g = typeof ap.gender === 'number' ? ap.gender : 0;
   section(box, 'body', T('Body'), b => {
-    slider(b, T('Gender'), 'appearance.gender', { min: 0, max: 1, def: 0, xmin: -3, xmax: 4, fmt: v => (v <= 0.1 ? t('Male') : v >= 0.9 ? t('Female') : fmtNum(v)) });
-    slider(b, T('Height'), 'appearance.height', { min: 0.5, max: 1.5, def: 0.98, xmin: 0.05, xmax: 4 });
-    slider(b, T('Weight'), 'appearance.weight', { min: 0, max: 1, def: 0.4, xmin: -3, xmax: 4 });
+    slider(b, T('Gender'), 'appearance.gender', { min: 0, max: 1, def: 0, xmin: -3, xmax: 4, ends: [T('Male'), T('Female')] });
+    slider(b, T('Height'), 'appearance.height', { min: 0.5, max: 1.5, def: 0.98, xmin: 0.05, xmax: 4, ends: [T('Short'), T('Tall')] });
+    slider(b, T('Weight'), 'appearance.weight', { min: 0, max: 1, def: 0.4, xmin: -3, xmax: 4, ends: [T('Slim'), T('Heavy')] });
     colorRow(b, T('Skin'), 'appearance.skinColor', '#96785F', skinExtra);
-  }, true);
+  }, true, t(g < 0.2 ? 'Male' : g < 0.4 ? 'Rather male' : g <= 0.6 ? 'Androgynous' : g <= 0.8 ? 'Rather female' : 'Female'));
 
   section(box, 'hair', T('Hair'), b => {
     pathRow(b, T('Style'), 'appearance.hairPath', catalog('hair'));
     colorRow(b, T('Colour'), 'appearance.hairColor', '#101014');
-  });
+  }, false, nameOfPath(ap.hairPath));
 
   section(box, 'face', T('Face'), b => {
     slotRow(b, T('Mouth'), 'faceLayers', catalog('mouths'), false);
     slotRow(b, T('Facial hair'), 'faceLayers', catalog('facialHair'), false);
     slotRow(b, T('Eye details'), 'faceLayers', catalog('facialDetails'), false);
-  });
+  }, false, slotNames(ap, 'faceLayers', ['mouths', 'facialHair', 'facialDetails']));
 
   section(box, 'eyes', T('Eyes'), b => {
     colorRow(b, T('Eye colour'), 'appearance.eyeBallTint', '#FFFFFF');
-    slider(b, T('Pupil'), 'appearance.pupilDilation', { min: 0, max: 1, def: 1, xmax: 5 });
-    slider(b, T('Upper lid'), ['appearance.leftEye.top', 'appearance.rightEye.top'], { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3 });
-    slider(b, T('Lower lid'), ['appearance.leftEye.bottom', 'appearance.rightEye.bottom'], { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3 });
+    slider(b, T('Pupil'), 'appearance.pupilDilation', { min: 0, max: 1, def: 1, xmax: 5, ends: [T('Small'), T('Large')] });
+    slider(b, T('Upper lid'), ['appearance.leftEye.top', 'appearance.rightEye.top'], { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3, ends: [T('Closed'), T('Open')] });
+    slider(b, T('Lower lid'), ['appearance.leftEye.bottom', 'appearance.rightEye.bottom'], { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3, ends: [T('Closed'), T('Open')] });
     if (st.expert) {
       slider(b, T('Right upper lid'), 'appearance.rightEye.top', { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3 });
       slider(b, T('Right lower lid'), 'appearance.rightEye.bottom', { min: 0, max: 1, def: 0.5, xmin: -2, xmax: 3 });
@@ -1891,14 +2124,14 @@ function buildLook(box, n) {
       const mats = (st.look && st.look.eyeballMaterials) || [];
       if (mats.length) selectRow(b, T('Eyeball material'), 'appearance.eyeballMaterial', mats.map(m => [m, m]), 'Default');
     }
-  });
+  }, false, eyesSummary(ap));
 
   section(box, 'brows', T('Eyebrows'), b => {
-    slider(b, T('Size'), 'appearance.eyebrowScale', { min: 0, max: 2, def: 1, xmin: -5, xmax: 10 });
-    slider(b, T('Thickness'), 'appearance.eyebrowThickness', { min: 0, max: 3, def: 1, xmin: -5, xmax: 10 });
-    slider(b, T('Brow height'), 'appearance.eyebrowRestingHeight', { min: -1, max: 1, def: 0, xmin: -10, xmax: 10 });
-    slider(b, T('Angle'), 'appearance.eyebrowRestingAngle', { min: -4, max: 11, def: 0, xmin: -180, xmax: 180 });
-  });
+    slider(b, T('Size'), 'appearance.eyebrowScale', { min: 0, max: 2, def: 1, xmin: -5, xmax: 10, ends: [T('Small'), T('Large')] });
+    slider(b, T('Thickness'), 'appearance.eyebrowThickness', { min: 0, max: 3, def: 1, xmin: -5, xmax: 10, ends: [T('Thin'), T('Thick')] });
+    slider(b, T('Brow height'), 'appearance.eyebrowRestingHeight', { min: -1, max: 1, def: 0, xmin: -10, xmax: 10, ends: [T('Low'), T('High')] });
+    slider(b, T('Angle'), 'appearance.eyebrowRestingAngle', { min: -4, max: 11, def: 0, xmin: -180, xmax: 180, ends: [T('Less'), T('More')] });
+  }, false, browsSummary(ap));
 
   section(box, 'clothes', T('Clothing'), b => {
     slotRow(b, T('Top'), 'bodyLayers', catalog('tops'), true);
@@ -1906,10 +2139,15 @@ function buildLook(box, n) {
     slotRow(b, T('Shoes'), 'accessories', catalog('shoes'), true);
     slotRow(b, T('Headwear'), 'accessories', catalog('headwear'), true);
     slotRow(b, T('Eyewear'), 'accessories', catalog('eyewear'), true);
-  });
+  }, false, [slotNames(ap, 'bodyLayers', ['tops', 'bottoms']), slotNames(ap, 'accessories', ['headwear', 'eyewear'])]
+    .filter(x => x !== t('None')).join(', ') || t('None'));
 
-  section(box, 'acc', T('Accessories'), b => accessoryRows(b, n));
-  section(box, 'tattoos', T('Tattoos'), b => tattooRows(b, n));
+  const slotted = new Set([...pathSet(catalog('shoes')), ...pathSet(catalog('headwear')), ...pathSet(catalog('eyewear'))]);
+  const accCount = (ap.accessories || []).filter(l => l && !slotted.has(l.path)).length;
+  const tatSet = pathSet(catalog('tattoos'));
+  const tatCount = ['faceLayers', 'bodyLayers'].reduce((a, k) => a + (ap[k] || []).filter(l => l && (tatSet.has(l.path) || l.file)).length, 0);
+  section(box, 'acc', T('Accessories'), b => accessoryRows(b, n), false, countOf(accCount, '1 item', '{n} items'));
+  section(box, 'tattoos', T('Tattoos'), b => tattooRows(b, n), false, countOf(tatCount, '1 tattoo', '{n} tattoos'));
 
   if (st.expert) {
     section(box, 'xfaceLayers', T('Face layers'), b => layerStack(b, n, 'faceLayers'));
@@ -1979,7 +2217,7 @@ function accessoryRows(box, n) {
   if (!others.length) line(box, t('No other accessories.'), 'mu');
   for (const i of others) layerRow(box, n, 'accessories', arr, i, { noOrder: true });
   const options = catalog('accessories').filter(o => !slots.has(o.path));
-  box.appendChild(btn(t('+ Add accessory'), 'sm', () => pickDialog(t('Accessories'), asItems(options), {}, path => {
+  box.appendChild(addBtn(t('Add accessory'), 'sm', () => pickDialog(t('Accessories'), asItems(options), {}, path => {
     if (!path) return;
     const o = options.find(x => x.path === path) || {};
     write([{ path: 'appearance.accessories', value: arr.concat([{ path, tint: o.tint || '#FFFFFF' }]) }]);
@@ -1998,7 +2236,7 @@ function tattooRows(box, n) {
   if (!any) line(box, t('No tattoos.'), 'mu');
   // Inkorporated tattoos come as a PNG file instead of a game path; picking one copies it into the project.
   const items = tats.map(o => ({ value: o.path || 'file:' + o.file, label: o.name || nameOfPath(o.path), group: o.category || o.group }));
-  box.appendChild(btn(t('+ Add tattoo'), 'sm', () => pickDialog(t('Tattoos'), items, {}, path => {
+  box.appendChild(addBtn(t('Add tattoo'), 'sm', () => pickDialog(t('Tattoos'), items, {}, path => {
     if (!path) return;
     const o = tats.find(x => (x.path || 'file:' + x.file) === path) || {};
     const list = String(o.group || '').toLowerCase() === 'face' || path.indexOf('/Face/') >= 0 ? 'faceLayers' : 'bodyLayers';
@@ -2073,22 +2311,15 @@ function layerStack(box, n, list) {
     box.appendChild(r);
   });
   const options = catalog(list);
-  box.appendChild(btn(t('+ Add layer'), 'sm', () => pickDialog(t('Add layer'), asItems(options), {}, path => {
+  box.appendChild(addBtn(t('Add layer'), 'sm', () => pickDialog(t('Add layer'), asItems(options), {}, path => {
     if (!path) return;
     const o = options.find(x => x.path === path) || {};
     write([{ path: 'appearance.' + list, value: arr.concat([{ path, tint: o.tint || '#FFFFFF' }]) }]);
     renderFields();
   })));
-  if (list === 'accessories') return;
-  box.appendChild(btn(t('+ Own picture'), 'sm', () => {
-    const pics = call('catalog.pictures');
-    if (!Array.isArray(pics)) { console.error('[personify] catalog.pictures did not answer a list'); toast(errText('picture_failed'), 'bad'); return; }
-    if (!pics.length) { toast(t('No PNG files in UserData/Personify/Import.'), 'bad'); return; }
-    pickDialog(t('Own picture'), pics.map(p => ({ value: p.file, label: p.name })), {}, f => { if (f) addPicture(list, 'import', f); });
-  }));
 }
 
-// Copies a picture into the project (from the Import folder or an Inkorporated pack) and adds it on top of a layer list.
+// Copies an Inkorporated tattoo into the project and adds it on top of a layer list.
 function addPicture(list, from, file) {
   const r = call('look.importPicture', { from, file });
   if (!r || r.ok === false) {
@@ -2177,15 +2408,15 @@ function buildRole(box, n) {
   if (role === 'supplier') section(box, 'supplier', T('Supplier'), b => supplierFields(b), true);
 
   section(box, 'character', T('Character'), b => {
-    slider(b, T('Health'), 'behavior.maxHealth', { min: 1, max: 1000, def: 100, whole: true });
-    slider(b, T('Aggression'), 'behavior.aggression', { min: 0, max: 1, def: 0, fmt: pct });
-    slider(b, T('Size'), 'behavior.scale', { min: 0.25, max: 4, def: 1, xmin: 0.05, xmax: 10 });
+    if (st.expert) slider(b, T('Health'), 'behavior.maxHealth', { min: 1, max: 1000, def: 100, whole: true });
+    slider(b, T('Aggression'), 'behavior.aggression', { min: 0, max: 1, def: 0, fmt: pct, ends: [T('Calm'), T('Aggressive')] });
+    slider(b, T('Scale'), 'behavior.scale', { min: 0.25, max: 4, def: 1, xmin: 0.05, xmax: 10, ends: [T('Small'), T('Large')] });
     selectRow(b, T('Conversation'), 'behavior.conversation', CONVERSATIONS.map(([v, l]) => [v, t(l)]), 'none');
   }, role !== 'customer' && role !== 'dealer' && role !== 'supplier');
 
   section(box, 'inventory', T('Inventory'), b => {
-    slider(b, T('Cash from'), 'inventory.cash.min', { min: 0, max: 5000, step: 5, def: 0, whole: true, pair: ['inventory.cash.max', 0], fmt: v => '$' + Math.round(v) });
-    slider(b, T('Cash to'), 'inventory.cash.max', { min: 0, max: 5000, step: 5, def: 0, whole: true, pair: ['inventory.cash.min', 0], fmt: v => '$' + Math.round(v) });
+    slider(b, T('Cash from'), 'inventory.cash.min', { min: 0, max: 5000, step: 5, def: 0, whole: true, pair: ['inventory.cash.max', 0], fmt: money });
+    slider(b, T('Cash to'), 'inventory.cash.max', { min: 0, max: 5000, step: 5, def: 0, whole: true, pair: ['inventory.cash.min', 0], fmt: money });
     itemList(b, T('Items'), 'inventory.items', true);
     toggle(b, T('Empty each night'), 'inventory.clearEachNight', false);
   });
@@ -2229,12 +2460,12 @@ function customerFields(b) {
     });
     chips.appendChild(c);
   }
+  if (!cur) chips.appendChild(el('div', 'chip on', profs.some(p => p !== profs[0]) ? t('Mixed') : t('Own values')));
   row.appendChild(chips);
-  if (!cur) line(b, profs.some(p => p !== profs[0]) ? t('Mixed') : t('Own values'), 'mu');
 
   if (st.expert) {
-    slider(b, T('Spends from'), 'customer.spending.min', { min: 0, max: 5000, step: 10, def: 200, whole: true, pair: ['customer.spending.max', 500], fmt: v => '$' + Math.round(v), after: renderFields });
-    slider(b, T('Spends to'), 'customer.spending.max', { min: 0, max: 5000, step: 10, def: 500, whole: true, pair: ['customer.spending.min', 200], fmt: v => '$' + Math.round(v), after: renderFields });
+    slider(b, T('Spends from'), 'customer.spending.min', { min: 0, max: 5000, step: 10, def: 200, whole: true, pair: ['customer.spending.max', 500], fmt: money, after: renderFields });
+    slider(b, T('Spends to'), 'customer.spending.max', { min: 0, max: 5000, step: 10, def: 500, whole: true, pair: ['customer.spending.min', 200], fmt: money, after: renderFields });
     slider(b, T('Orders a week from'), 'customer.ordersPerWeek.min', { min: 0, max: 7, def: 1, whole: true, pair: ['customer.ordersPerWeek.max', 5], after: renderFields });
     slider(b, T('Orders a week to'), 'customer.ordersPerWeek.max', { min: 0, max: 7, def: 5, whole: true, pair: ['customer.ordersPerWeek.min', 1], after: renderFields });
   }
@@ -2246,19 +2477,22 @@ function customerFields(b) {
     store: q => hhmm(q * 15), fmt: q => hhmm(q * 15), noType: true,
   });
   b.appendChild(el('div', 'subh', t('Samples')));
-  line(b, t('Chance to take a sample, by the average relation to this customer\'s contacts.'), 'mu');
-  slider(b, T('0 % at'), 'customer.mutualRelationRequirement.min', { min: 0, max: 5, step: 0.1, def: 3, pair: ['customer.mutualRelationRequirement.max', 5] });
-  slider(b, T('100 % at'), 'customer.mutualRelationRequirement.max', { min: 0, max: 5, step: 0.1, def: 5, pair: ['customer.mutualRelationRequirement.min', 3] });
+  // The sample chance rises from 0 % at the first relation to 100 % at the second one (average over the contacts).
+  const rmin = readField('customer.mutualRelationRequirement.min', 3), rmax = readField('customer.mutualRelationRequirement.max', 5);
+  b.appendChild(el('div', 'say', rmin.mixed || rmax.mixed ? t('Mixed') :
+    t('Takes samples from {a}, always from {b}.', { a: t(relName(rmin.value)), b: t(relName(rmax.value)) })));
+  const rel = [T('Hostile'), T('Loyal')];
+  slider(b, T('Samples from'), 'customer.mutualRelationRequirement.min', { min: 0, max: 5, step: 0.1, def: 3, pair: ['customer.mutualRelationRequirement.max', 5], ends: rel, after: renderFields });
+  slider(b, T('Always from'), 'customer.mutualRelationRequirement.max', { min: 0, max: 5, step: 0.1, def: 5, pair: ['customer.mutualRelationRequirement.min', 3], ends: rel, after: renderFields });
   toggle(b, T('First sample always works'), 'customer.guaranteeFirstSample', false);
   toggle(b, T('Can be approached directly'), 'customer.allowDirectApproach', true);
-  slider(b, T('Calls the police'), 'customer.callPoliceChance', { min: 0, max: 1, def: 0.5, fmt: pct });
-  slider(b, T('Addiction'), 'customer.dependence.base', { min: 0, max: 1, def: 0, fmt: pct, pair: ['customer.dependence.multiplier', 1] });
-  slider(b, T('Addiction rate'), 'customer.dependence.multiplier', { min: 0, max: 2, def: 1, pair: ['customer.dependence.base', 0] });
+  slider(b, T('Calls the police'), 'customer.callPoliceChance', { min: 0, max: 1, def: 0.5, fmt: pct, ends: [T('Never'), T('Always')] });
+  slider(b, T('Addiction'), 'customer.dependence.base', { min: 0, max: 1, def: 0, fmt: pct, pair: ['customer.dependence.multiplier', 1], ends: [T('None'), T('Strong')] });
+  slider(b, T('Addiction rate'), 'customer.dependence.multiplier', { min: 0, max: 2, def: 1, pair: ['customer.dependence.base', 0], ends: [T('Slow'), T('Fast')] });
 }
 
 function tasteFields(b) {
-  line(b, t('-1 hates it, 1 loves it.'), 'mu');
-  for (const [k, label] of DRUGS) slider(b, label, 'customer.affinities.' + k, { min: -1, max: 1, def: 0 });
+  for (const [k, label] of DRUGS) slider(b, label, 'customer.affinities.' + k, { min: -1, max: 1, def: 0, ends: [T('Hates'), T('Loves')] });
   b.appendChild(el('div', 'subh', t('Favourite effects')));
   const f = readField('customer.preferredProperties', []);
   const ids = Array.isArray(f.value) ? f.value : [];
@@ -2279,7 +2513,7 @@ function tasteFields(b) {
   b.appendChild(chips);
   const free = (st.effects || []).filter(e => ids.indexOf(e.id) < 0);
   if (!(st.effects || []).length) line(b, t('No effects known yet.'), 'mu');
-  else b.appendChild(btn(t('+ Add effect'), 'sm', () => pickDialog(t('Favourite effects'),
+  else b.appendChild(addBtn(t('Add effect'), 'sm', () => pickDialog(t('Favourite effects'),
     free.map(e => ({ value: e.id, label: e.name, group: e.tier ? t('Tier {n}', { n: e.tier }) : '' })), {}, id => {
       if (!id) return;
       write([{ path: 'customer.preferredProperties', value: ids.concat([id]) }]);
@@ -2296,7 +2530,7 @@ function buildingRow(b, label, path) {
 function dealerFields(b) {
   segRow(b, T('Works for'), 'dealer.type', [['player', T('You')], ['cartel', T('The cartel')]], 'player');
   slider(b, T('Cut'), 'dealer.cut', { min: 0, max: 1, def: 0.2, fmt: pct });
-  slider(b, T('Signing fee'), 'dealer.signingFee', { min: 0, max: 10000, step: 50, def: 0, whole: true, fmt: v => '$' + Math.round(v) });
+  slider(b, T('Signing fee'), 'dealer.signingFee', { min: 0, max: 10000, step: 50, def: 0, whole: true, fmt: money });
   buildingRow(b, T('Home'), 'dealer.home');
   toggle(b, T('Accepts lower quality'), 'dealer.allowInsufficientQuality', false);
   toggle(b, T('Accepts higher quality'), 'dealer.allowExcessQuality', true);
@@ -2305,9 +2539,9 @@ function dealerFields(b) {
 
 function supplierFields(b) {
   itemList(b, T('Sells'), 'supplier.items', false);
-  slider(b, T('Debt limit from'), 'supplier.minOrderLimit', { min: 0, max: 10000, step: 10, def: 50, whole: true, fmt: v => '$' + Math.round(v) });
-  slider(b, T('Debt limit to'), 'supplier.maxOrderLimit', { min: 0, max: 10000, step: 10, def: 500, whole: true, fmt: v => '$' + Math.round(v) });
-  textRow(b, T('Recommendation'), 'supplier.recommendMessage', t('What a customer says about them'), { multi: true });
+  slider(b, T('Debt limit from'), 'supplier.minOrderLimit', { min: 0, max: 10000, step: 10, def: 50, whole: true, fmt: money });
+  slider(b, T('Debt limit to'), 'supplier.maxOrderLimit', { min: 0, max: 10000, step: 10, def: 500, whole: true, fmt: money });
+  textRow(b, T('Recommendation'), 'supplier.recommendMessage', t('What a customer hears about this supplier'), { multi: true });
   textRow(b, T('Locked hint'), 'supplier.unlockHint', t('Shown on the locked contact'));
   if (st.expert) textRow(b, T('Stash dead drop'), 'supplier.stashDeadDrop', t('Dead drop GUID'));
 }
@@ -2342,7 +2576,7 @@ function itemList(b, label, path, withQty) {
     b.appendChild(add);
     return;
   }
-  b.appendChild(btn(t('+ Add item'), 'sm', () => pickDialog(t(label),
+  b.appendChild(addBtn(t('Add item'), 'sm', () => pickDialog(t(label),
     items.map(it => ({ value: it.id, label: it.name, group: it.category, sub: st.expert ? it.id : '' })), {}, id => {
       if (id) save(arr.concat([id]));
     })));
@@ -2383,7 +2617,7 @@ function variantList(b, path, ph, chain) {
   }
   if (!arr.length && !ui.pending[path]) wrap.appendChild(el('div', 'note mu', t('Game text')));
   b.appendChild(wrap);
-  if (!ui.pending[path]) b.appendChild(btn(t('+ Add text'), 'xs', () => { ui.pending[path] = true; renderFields(); }));
+  if (!ui.pending[path]) b.appendChild(addBtn(t('Add text'), 'xs', () => { ui.pending[path] = true; renderFields(); }));
 }
 
 /* ---------- Routine ---------- */
@@ -2439,12 +2673,11 @@ function buildRoutine(box, n) {
   section(box, 'spawn', T('Start point'), b => {
     const sp = n.spawn || {};
     const row = frow(b, T('Position'), 'spawn');
-    row.appendChild(el('div', 'fv grow', typeof sp.x === 'number' ? fmtNum(sp.x) + ', ' + fmtNum(sp.y) + ', ' + fmtNum(sp.z) : t('Not set')));
     const picking = ui.pick && ui.pick.what === 'spawn';
-    row.appendChild(btn(picking ? t('Click the map') : t('Pick on map'), 'xs' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what: 'spawn' })));
+    placeLine(row, typeof sp.x === 'number' ? whereIs(sp.x, sp.y, sp.z) : t('Not set'), btn(picking ? t('Click the map') : t('Pick on map'), 'xs pk' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what: 'spawn' }), 'pin'));
     const regions = (st.world && st.world.regions && st.world.regions.length) ? st.world.regions : REGIONS;
     selectRow(b, T('Region'), 'spawn.region', regions.map(r => [r, r]), '', { none: true, noneLabel: t('Not set') });
-    slider(b, T('Facing'), 'spawn.rotationY', { min: 0, max: 359, def: 0, whole: true, fmt: v => Math.round(v) + ' deg' });
+    if (st.expert) slider(b, T('Facing'), 'spawn.rotationY', { min: 0, max: 359, def: 0, whole: true, fmt: v => Math.round(v) + '\u00b0' });
   }, true);
 
   section(box, 'schedule', T('Daily schedule'), b => scheduleFields(b, steps), true);
@@ -2486,7 +2719,7 @@ function scheduleFields(b, steps) {
   let addType = 'walkTo';
   const add = el('div', 'addstep');
   add.appendChild(selectEl(STEP_TYPES.map(([v, l]) => [v, t(l)]), addType, v => { addType = v; }));
-  add.appendChild(btn(t('+ Add step'), 'sm go', () => {
+  add.appendChild(addBtn(t('Add step'), 'sm', () => {
     const last = times.filter(x => x !== null);
     const at = last.length ? Math.min(23 * 60 + 45, Math.max(...last) + 60) : 8 * 60;
     const s = { type: addType, time: hhmm(at) };
@@ -2557,14 +2790,13 @@ function stepCard(s, i, steps) {
 
   const pickBtn = (what, label) => {
     const picking = ui.pick && ui.pick.what === what && ui.pick.index === i;
-    return btn(picking ? t('Click the map') : t(label), 'xs' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what, index: i }));
+    return btn(picking ? t('Click the map') : t(label), 'xs pk' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what, index: i }), 'pin');
   };
 
   if (POINT_TYPES.indexOf(s.type) >= 0) {
     const pr = field(T('Place'));
     const p = s.position;
-    pr.appendChild(el('div', 'fv grow', Array.isArray(p) && p.length >= 3 ? fmtNum(p[0]) + ', ' + fmtNum(p[1]) + ', ' + fmtNum(p[2]) : t('Not set')));
-    pr.appendChild(pickBtn('step', T('Pick on map')));
+    placeLine(pr, Array.isArray(p) && p.length >= 3 ? whereIs(p[0], p[1], p[2]) : t('Not set'), pickBtn('step', T('Pick on map')));
   }
 
   if (s.type === 'walkTo') {
@@ -2626,8 +2858,7 @@ function stepCard(s, i, steps) {
     if (code) {
       const cp = field(T('Car appears at'));
       const p = s.createVehicle.position;
-      cp.appendChild(el('div', 'fv grow', Array.isArray(p) ? fmtNum(p[0]) + ', ' + fmtNum(p[2]) : t('Next to the NPC')));
-      cp.appendChild(pickBtn('car', T('Pick on map')));
+      placeLine(cp, Array.isArray(p) ? whereIs(p[0], p[1] || 0, p[2]) : t('Next to the NPC'), pickBtn('car', T('Pick on map')));
     } else stepText(body, T('Car name'), s, 'vehicle', edit);
   }
 
@@ -2688,7 +2919,7 @@ function stepNumber(body, label, s, key, edit, whole) {
 
 function buildRelations(box, n) {
   section(box, 'rel', T('Relationship'), b => {
-    slider(b, T('Start relation'), 'relationships.delta', { min: 0, max: 5, step: 0.1, def: 0 });
+    slider(b, T('Start relation'), 'relationships.delta', { min: 0, max: 5, step: 0.1, def: 0, ends: [T('Hostile'), T('Loyal')] });
     toggle(b, T('Unlocked from the start'), 'relationships.unlocked', false);
     segRow(b, T('Unlocked by'), 'relationships.unlockType', [['Recommendation', T('Recommendation')], ['DirectApproach', T('Direct approach')]], 'Recommendation');
   }, true);
@@ -2744,7 +2975,7 @@ function connectionFields(b, n) {
     if (arr.indexOf(id) >= 0) { toast(t('Already connected.'), 'info'); return; }
     save(arr.concat([id]));
   }, { cls: 'grow' });
-  b.appendChild(btn(t('+ Add connection'), 'sm', () => pickDialog(t('Connections'), free, {}, id => { if (id) save(arr.concat([id])); })));
+  b.appendChild(addBtn(t('Add connection'), 'sm', () => pickDialog(t('Connections'), free, {}, id => { if (id) save(arr.concat([id])); })));
   if (st.expert || !hasNpcs) b.appendChild(typed);
 }
 
@@ -2872,6 +3103,21 @@ host.on('toast', p => {
   if (!x) return;
   toast(x.text, x.severity === 'error' ? 'bad' : x.severity === 'warning' ? 'warn' : x.severity === 'success' ? 'ok' : 'info');
 });
+host.on('faces.ready', p => {
+  const x = parsePayload(p, 'faces.ready');
+  if (!x) return;
+  let n = 0;
+  for (const folder of Object.keys(x)) {
+    const got = x[folder] || {};
+    if (st.project && st.project.folder === folder) Object.assign(st.faces, got);
+    const crew = st.wall[folder];
+    if (crew) for (const m of crew) if (got[m.id]) m.face = got[m.id];
+    n += Object.keys(got).length;
+  }
+  console.log('[personify] ' + n + ' rendered face(s) arrived');
+  if (ui.screen === 'start') renderStart();
+  else if (ui.screen === 'editor') { renderList(); renderFields(); }
+});
 host.on('editor.back', () => back());
 host.on('editor.key', p => {
   const x = parsePayload(p, 'editor.key');
@@ -2881,7 +3127,9 @@ host.on('editor.key', p => {
 
 // The stage rect and the list heights are only known after a render; a light poll catches every size change.
 setInterval(() => {
+  if (liveTip && !document.body.contains(liveTip.anchor)) hideTip();
   reportStage();
+  watchStageBox();
   for (const v of lists) {
     if (!document.body.contains(v.box)) { lists.delete(v); continue; }
     v.check();

@@ -417,8 +417,8 @@ namespace Personify.Editor
             {
                 CaptureCamera(cam);
                 Vector3 target = _avatar.gameObject.transform.position + Vector3.up * 0.95f;
-                // 1.15 m half-height around the target keeps head and feet inside the frame with a little air.
-                float dist = 1.15f / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                // 1.35 m half-height around the target keeps a tall NPC with a hat and the feet inside the frame.
+                float dist = 1.35f / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
                 Vector3 from = target + FacingDirection() * dist + Vector3.up * 0.15f;
                 cam.transform.SetPositionAndRotation(from, Quaternion.LookRotation(target - from, Vector3.up));
                 _baseDist = (target - from).magnitude;

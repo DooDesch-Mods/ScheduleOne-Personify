@@ -209,6 +209,8 @@ namespace Personify.Host
                 d["portrait"] = rel;
                 return d;
             });
+            On("faces.capture", _ => Faces.Capture(Need().Project));
+            On("faces.wall", _ => Faces.Wall());
             On("stage.rect", a =>
             {
                 var o = Obj(a);
@@ -218,7 +220,6 @@ namespace Personify.Host
             On("stage.mode", a => { EditorHost.SetStageMode(a); return Ok; });
 
             On("catalog.look", _ => LookBridge.Catalog());
-            On("catalog.pictures", _ => LookBridge.Pictures());
             On("look.importPicture", a =>
             {
                 string rel = LookBridge.ImportPicture(Need().Project, Obj(a));

@@ -20,6 +20,10 @@ All notable changes to Personify are documented here. This project adheres to
 - Publish builds a Thunderstore-ready zip under `UserData/Personify/Exports`.
 - Needs Sideload 1.36.0 and Personnel 2.3.0. Update both along with the mod.
 
+### Removed
+
+- Custom PNG layers from `UserData/Personify/Import`. Tattoos come from the game or from Inkorporated packs, made with Inkubator.
+
 ## [1.5.0] - 2026-10-28
 
 ### Added

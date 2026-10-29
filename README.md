@@ -30,7 +30,7 @@
 
 - **Look.** Body, hair, face, eyes, clothing, accessories and tattoos, applied live to a 3D preview
   you can rotate and zoom. Random look, and an Expert view with the full face, body and accessory
-  layer stacks, including your own PNG pictures.
+  layer stacks.
 - **Role.** Civilian, customer, dealer or supplier. Customers get their profile, order days, taste,
   samples and addiction; dealers and suppliers get their own panels.
 - **Routine.** Click the town map to set where the NPC starts the day and where it goes: go inside,
@@ -94,9 +94,8 @@ Tips:
 - Escape or right-click steps back one level. Ctrl+Z and Ctrl+Y undo and redo.
 - Select several NPCs in the list to change them together.
 - **History** in the project menu steps a project back to an earlier state.
-- Own pictures: put PNGs into `UserData/Personify/Import/`, then use **+ Own picture** in a face or
-  body layer stack (Expert). A picture is a full UV texture; the
-  [authoring guide](https://docs.doodesch.de/mods/personnel/guides/custom-png-layers/) covers alignment.
+- Own tattoos come from [Inkubator](https://github.com/DooDesch-Mods/ScheduleOne-Inkubator): install its export as
+  an Inkorporated pack and the tattoos show up in the picker.
 - The NPC id (`packname_npcname`) is what other mods reference; renaming an NPC changes it.
 
 ## Configuration

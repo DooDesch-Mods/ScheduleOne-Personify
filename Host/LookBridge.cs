@@ -96,6 +96,60 @@ namespace Personify.Host
             return LookJson.FromDraft(a, null);
         }
 
+        /// <summary>PNGs in UserData/Personify/Import a layer can be made from: [{file,name}], file is the file name.</summary>
+        internal static JArray Pictures()
+        {
+            var list = new JArray();
+            try
+            {
+                Directory.CreateDirectory(Paths.Import);
+                foreach (string f in Directory.GetFiles(Paths.Import, "*.png").OrderBy(x => x, StringComparer.OrdinalIgnoreCase))
+                    list.Add(new JObject { ["file"] = Path.GetFileName(f), ["name"] = Path.GetFileNameWithoutExtension(f) });
+            }
+            catch (Exception e) { Core.Log.Error($"[look] listing {Paths.Import} failed: {e.Message}"); }
+            return list;
+        }
+
+        /// <summary>
+        /// Copies a picture into the project's <c>sources/</c> folder and returns its project path ("sources/x.png"),
+        /// which is also its path inside the installed pack. <c>from</c> is "import" (a file name in the Import folder)
+        /// or "inkorporated" (a tattoo PNG from the Inkorporated catalog). Anything else is refused; null on failure.
+        /// </summary>
+        internal static string ImportPicture(PackProject p, JObject a)
+        {
+            string from = (string)a?["from"], file = (string)a?["file"];
+            string src = null;
+            if (from == "import")
+            {
+                if (string.IsNullOrWhiteSpace(file) || file.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                { Core.Log.Warning($"[look] picture refused: '{file}' is not a file name in the Import folder."); return null; }
+                src = Path.Combine(Paths.Import, file);
+            }
+            else if (from == "inkorporated")
+            {
+                src = InkorporatedCatalog.ByPng(file)?.PngPath;
+                if (src == null) { Core.Log.Warning($"[look] picture refused: '{file}' is not an Inkorporated tattoo."); return null; }
+            }
+            else { Core.Log.Warning($"[look] picture refused: unknown source '{from}'."); return null; }
+            if (!File.Exists(src)) { Core.Log.Warning($"[look] picture '{src}' does not exist."); return null; }
+            try
+            {
+                string dir = Path.Combine(p.Dir, "sources");
+                Directory.CreateDirectory(dir);
+                string name = Path.GetFileName(src);
+                string dest = Path.Combine(dir, name);
+                long size = new FileInfo(src).Length;
+                // A file of the same name and size is taken to be the same picture; another one gets a number.
+                for (int n = 1; File.Exists(dest) && new FileInfo(dest).Length != size; n++)
+                    dest = Path.Combine(dir, $"{Path.GetFileNameWithoutExtension(name)}_{n}.png");
+                if (!File.Exists(dest)) File.Copy(src, dest);
+                string rel = "sources/" + Path.GetFileName(dest);
+                Core.Log.Msg($"[look] picture {src} copied into '{p.Folder}' as {rel}.");
+                return rel;
+            }
+            catch (Exception e) { Core.Log.Error($"[look] copying picture {src} into '{p.Folder}' failed: {e.Message}"); return null; }
+        }
+
         private static string RandomCloth()
         {
             var c = Color.HSVToRGB(Random.value, Random.Range(0.1f, 0.6f), Random.Range(0.2f, 0.9f));

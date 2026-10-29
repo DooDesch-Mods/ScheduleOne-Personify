@@ -48,6 +48,9 @@ namespace Personify.Host
             });
             On("projects.open", a =>
             {
+                // The open project is saved first: reopening it straight away would otherwise read the file before
+                // the last edits reach it, and the next autosave would write the stale copy back.
+                EditorHost.CloseProject();
                 var p = ProjectFiles.Load(a);
                 if (p == null) return Fail("not_found");
                 EditorHost.OpenProject(p);
@@ -215,6 +218,12 @@ namespace Personify.Host
             On("stage.mode", a => { EditorHost.SetStageMode(a); return Ok; });
 
             On("catalog.look", _ => LookBridge.Catalog());
+            On("catalog.pictures", _ => LookBridge.Pictures());
+            On("look.importPicture", a =>
+            {
+                string rel = LookBridge.ImportPicture(Need().Project, Obj(a));
+                return rel == null ? Fail("picture_failed") : new JObject { ["ok"] = true, ["file"] = rel };
+            });
             On("catalog.world", _ => WorldBridge.Catalog());
             On("catalog.effects", _ => GameData.Effects());
             On("world.map", _ => WorldBridge.Map());

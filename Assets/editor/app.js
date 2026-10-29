@@ -91,6 +91,7 @@ const ERRORS = {
   npc_not_found: T('That NPC no longer exists.'),
   role_unknown: T('Unknown role.'),
   portrait_failed: T('The contact picture could not be taken.'),
+  picture_failed: T('The picture could not be added.'),
   no_world: T('Load a save once first.'),
   no_save: T('No save found.'),
   save_failed: T('The project could not be saved.'),
@@ -1992,13 +1993,16 @@ function tattooRows(box, n) {
   let any = false;
   for (const list of ['faceLayers', 'bodyLayers']) {
     const arr = getPath(n, 'appearance.' + list) || [];
-    arr.forEach((l, i) => { if (l && set.has(l.path)) { any = true; layerRow(box, n, list, arr, i, { noOrder: true }); } });
+    arr.forEach((l, i) => { if (l && (set.has(l.path) || l.file)) { any = true; layerRow(box, n, list, arr, i, { noOrder: true }); } });
   }
   if (!any) line(box, t('No tattoos.'), 'mu');
-  box.appendChild(btn(t('+ Add tattoo'), 'sm', () => pickDialog(t('Tattoos'), asItems(tats), {}, path => {
+  // Inkorporated tattoos come as a PNG file instead of a game path; picking one copies it into the project.
+  const items = tats.map(o => ({ value: o.path || 'file:' + o.file, label: o.name || nameOfPath(o.path), group: o.category || o.group }));
+  box.appendChild(btn(t('+ Add tattoo'), 'sm', () => pickDialog(t('Tattoos'), items, {}, path => {
     if (!path) return;
-    const o = tats.find(x => x.path === path) || {};
+    const o = tats.find(x => (x.path || 'file:' + x.file) === path) || {};
     const list = String(o.group || '').toLowerCase() === 'face' || path.indexOf('/Face/') >= 0 ? 'faceLayers' : 'bodyLayers';
+    if (o.file) { addPicture(list, 'inkorporated', o.file); return; }
     const arr = getPath(npcById(st.active), 'appearance.' + list) || [];
     write([{ path: 'appearance.' + list, value: arr.concat([{ path, tint: o.tint || '#FFFFFF' }]) }]);
     renderFields();
@@ -2075,6 +2079,27 @@ function layerStack(box, n, list) {
     write([{ path: 'appearance.' + list, value: arr.concat([{ path, tint: o.tint || '#FFFFFF' }]) }]);
     renderFields();
   })));
+  if (list === 'accessories') return;
+  box.appendChild(btn(t('+ Own picture'), 'sm', () => {
+    const pics = call('catalog.pictures');
+    if (!Array.isArray(pics)) { console.error('[personify] catalog.pictures did not answer a list'); toast(errText('picture_failed'), 'bad'); return; }
+    if (!pics.length) { toast(t('No PNG files in UserData/Personify/Import.'), 'bad'); return; }
+    pickDialog(t('Own picture'), pics.map(p => ({ value: p.file, label: p.name })), {}, f => { if (f) addPicture(list, 'import', f); });
+  }));
+}
+
+// Copies a picture into the project (from the Import folder or an Inkorporated pack) and adds it on top of a layer list.
+function addPicture(list, from, file) {
+  const r = call('look.importPicture', { from, file });
+  if (!r || r.ok === false) {
+    console.error('[personify] picture ' + file + ' not added: ' + ((r && r.error) || 'no answer'));
+    toast(errText((r && r.error) || 'picture_failed'), 'bad');
+    return;
+  }
+  const arr = getPath(npcById(st.active), 'appearance.' + list) || [];
+  write([{ path: 'appearance.' + list, value: arr.concat([{ file: r.file, kind: list === 'faceLayers' ? 'face' : 'body', tint: '#FFFFFF' }]) }]);
+  console.log('[personify] picture ' + r.file + ' added to ' + list);
+  renderFields();
 }
 
 /* ---------- Role ---------- */

@@ -3,6 +3,23 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-10-29
+
+### Added
+
+- New editor: four areas (Look, Role, Routine, Relations), a live 3D preview, undo and redo, and edit
+  several NPCs at once.
+- Test puts you in a save of your choice, right next to your NPC.
+- Phone app: set an NPC's start point and route steps where you stand, and see a look on the live NPC.
+- NPCs can be civilians, customers, dealers or suppliers. Customers unlock through the contacts you pick.
+- Installed packs: switch them on or off, or remove them, from the editor's start page.
+
+### Changed
+
+- Your work lives in projects: saved as you go, with a history to step back to. Import turns a pack into a project.
+- Publish builds a Thunderstore-ready zip under `UserData/Personify/Exports`.
+- Needs Sideload 1.36.0 and Personnel 2.3.0. Update both along with the mod.
+
 ## [1.5.0] - 2026-10-28
 
 ### Added

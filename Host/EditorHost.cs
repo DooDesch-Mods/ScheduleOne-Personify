@@ -35,6 +35,7 @@ namespace Personify.Host
         private static bool _stageOn;
         private static Rect _camRect = new Rect(0, 0, 1, 1);
         private static Camera _cam;
+        private static bool _noCamLogged;
         private static bool _expert;
 
         internal static bool IsOpen => _root != null;
@@ -187,13 +188,19 @@ namespace Personify.Host
             if (_stage.width < 8 || _stage.height < 8) return;
             if (_cam == null)
             {
-                _cam = Camera.main;
-                if (_cam == null) return;
+                _cam = Preview.FindMenuCamera();
+                if (_cam == null)
+                {
+                    if (!_noCamLogged) { Core.Log.Warning("[editor] no menu camera found - the preview fills the screen behind the page."); _noCamLogged = true; }
+                    return;
+                }
                 _camRect = _cam.rect;
+                Core.Log.Msg($"[editor] preview drawn by camera '{_cam.name}' into the stage ({_stage.width:0}x{_stage.height:0}).");
             }
             float sw = Screen.width, sh = Screen.height;
             var r = new Rect(_stage.x / sw, 1f - (_stage.y + _stage.height) / sh, _stage.width / sw, _stage.height / sh);
             if (_cam.rect != r) _cam.rect = r;
+            Preview.FrameCamera();
         }
 
         private static void RestoreCamera()

@@ -387,6 +387,8 @@
   "The pack could not be imported.": "Das Pack ließ sich nicht importieren.",
   "The pack could not be moved.": "Das Pack ließ sich nicht verschieben.",
   "The pack could not be removed.": "Das Pack ließ sich nicht entfernen.",
+  "The pack could not be installed.": "Das Pack ließ sich nicht installieren.",
+  "The pack could not be published.": "Das Pack ließ sich nicht veröffentlichen.",
   "The pack has no author.": "Das Pack hat keinen Autor.",
   "The pack is in your game.": "Das Pack ist in deinem Spiel.",
   "The project could not be created.": "Das Projekt ließ sich nicht anlegen.",

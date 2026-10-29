@@ -14,7 +14,7 @@ namespace Personify.Project
     public sealed class InstallResult
     {
         public bool ok;
-        /// <summary>Stable code for the page ("installed", "blocked", "failed", "published").</summary>
+        /// <summary>Stable code for the page ("installed", "blocked", "install_failed", "published", "publish_failed").</summary>
         public string code;
         public string path;
         public string text;
@@ -92,7 +92,7 @@ namespace Personify.Project
                 ProjectLog.Error($"[install] '{p.Folder}' to {target} failed: {e.Message}");
                 try { if (Directory.Exists(staging)) Directory.Delete(staging, true); }
                 catch (Exception e2) { ProjectLog.Warn($"[install] staging folder {staging} not removed: {e2.Message}"); }
-                return new InstallResult { ok = false, code = "failed", text = "Install failed: " + e.Message };
+                return new InstallResult { ok = false, code = "install_failed", text = "Install failed: " + e.Message };
             }
         }
 
@@ -168,7 +168,7 @@ namespace Personify.Project
             catch (Exception ex)
             {
                 ProjectLog.Error($"[publish] '{p.Folder}' failed: {ex.Message}");
-                return new InstallResult { ok = false, code = "failed", text = "Publishing failed: " + ex.Message };
+                return new InstallResult { ok = false, code = "publish_failed", text = "Publishing failed: " + ex.Message };
             }
         }
 

@@ -1,6 +1,6 @@
 /* Stand-in host for the Personify editor page.
  *
- * Installed when there is no `s1` (a plain browser) or when the host does not answer `app.init` (the surface was
+ * Loaded by preview.html only, never in the game. Installed when there is no `s1` (a plain browser) or when the host does not answer `app.init` (the surface was
  * mounted without the C# side). It holds one example project with five NPCs, the catalogs, saves and packs, and
  * answers every call of the contract with the same JSON shapes, so the page can be driven without the game.
  * `#many` in the URL adds 100 more NPCs to check the list; `#de` loads the German table.

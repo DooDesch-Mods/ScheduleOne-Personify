@@ -102,6 +102,8 @@ const ERRORS = {
   exists: T('That project already exists.'),
   move_failed: T('The pack could not be moved.'),
   remove_failed: T('The pack could not be removed.'),
+  install_failed: T('The pack could not be installed.'),
+  publish_failed: T('The pack could not be published.'),
 };
 function errText(code) {
   if (!code) return t('Something went wrong.');
@@ -907,7 +909,7 @@ function redo() {
 }
 
 function packDialog() {
-  const box = openDialog('mid');
+  const box = openDialog('medium');
   dialogHead(box, t('Pack settings'));
   const m = (st.project && st.project.manifest) || {};
   const ed = (st.project && st.project.editor) || {};
@@ -965,11 +967,10 @@ function fmtDate(utc) {
 function publish() {
   const r = call('publish');
   if (!r) { toast(t('The editor host did not answer.'), 'bad'); return; }
-  if (r.ok === false) { toast(r.text || errText(r.error || r.code), 'bad'); return; }
+  if (r.ok === false) { console.error('[personify] publish failed: ' + (r.error || r.code || '') + ' ' + (r.text || '')); toast(errText(r.error || r.code), 'bad'); return; }
   console.log('[personify] published to ' + r.path);
   const box = openDialog('small');
   dialogHead(box, t('Pack published'));
-  if (r.text) box.appendChild(el('div', 'dsub', r.text));
   if (r.path) box.appendChild(el('div', 'path', r.path));
   const acts = el('div', 'dacts');
   acts.appendChild(el('div', 'sp'));
@@ -1185,15 +1186,15 @@ function doInstall() {
   const r = call('install');
   if (!r) { toast(t('The editor host did not answer.'), 'bad'); return; }
   applyDelta(r);
-  if (r.ok === false) { console.error('[personify] install failed: ' + (r.code || '') + ' ' + (r.text || '')); toast(r.text || errText(r.code), 'bad'); return; }
+  if (r.ok === false) { console.error('[personify] install failed: ' + (r.code || '') + ' ' + (r.text || '')); toast(errText(r.code), 'bad'); return; }
   console.log('[personify] installed, code ' + r.code);
-  toast(r.text || t('The pack is in your game.'), 'ok');
+  toast(t('The pack is in your game.'), 'ok');
 }
 
 function testDialog() {
   if (!st.active) return;
   const saves = call('test.saves') || [];
-  const box = openDialog('mid');
+  const box = openDialog('medium');
   dialogHead(box, t('Test {name}', { name: (npcById(st.active) || {}).name || st.active }));
   box.appendChild(el('div', 'dsub', t('The game restarts, loads the save and puts you next to the NPC.')));
   let pick = (saves.find(s => s.newest) || saves[0] || {}).slot;
@@ -1205,7 +1206,7 @@ function testDialog() {
     const tx = el('div', 'pt');
     tx.appendChild(el('div', 'pnm', s.name || t('Save {n}', { n: s.slot })));
     const sub = [];
-    if (s.org) sub.push(s.org);
+    if (s.org && s.org !== s.name) sub.push(s.org);
     if (s.lastPlayed) sub.push(t('Last played {when}', { when: fmtDate(s.lastPlayed) }));
     tx.appendChild(el('div', 'psub', sub.join(' · ')));
     r.appendChild(tx);
@@ -2729,7 +2730,7 @@ function wizard() {
   const steps = [T('Name'), T('Role'), T('Look')];
   draw();
   function draw() {
-    const box = openDialog('mid');
+    const box = openDialog('medium');
     dialogHead(box, t('New NPC'));
     const prog = el('div', 'wprog');
     steps.forEach((s, i) => prog.appendChild(el('div', 'wp' + (i === w.step ? ' on' : i < w.step ? ' done' : ''), t(s))));

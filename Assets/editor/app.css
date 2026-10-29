@@ -264,7 +264,7 @@ textarea.inp { height: 70px; padding: 8px 10px; }
 .scrim { background-color: rgba(5, 6, 9, 0.72); align-items: center; justify-content: center; }
 .dialog { width: 620px; max-height: 86%; padding: 18px 20px; gap: 12px; border-radius: 12px; background-color: #161922; border: 1px solid #2A2E3A; }
 .dialog.small { width: 480px; }
-.dialog.mid { width: 640px; }
+.dialog.medium { width: 640px; }
 .dialog.tall { width: 640px; height: 760px; }
 .dh { flex-direction: row; align-items: center; gap: 10px; }
 .dt { font-size: 20px; font-weight: bold; }

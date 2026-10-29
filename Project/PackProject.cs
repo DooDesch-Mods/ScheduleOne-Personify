@@ -104,6 +104,9 @@ namespace Personify.Project
                     if (t is JObject o) o.Remove(EditorKey);
             int v = (int?)m["schemaVersion"] ?? 1;
             if (v < SchemaVersion) m["schemaVersion"] = SchemaVersion;
+            // The editor shows "World NPC" as on while autoRegister is unset, but Personnel reads a missing value as
+            // false: an NPC without its own spawn.auto would install and never appear. Write the shown state.
+            if (m["autoRegister"] == null || m["autoRegister"].Type == JTokenType.Null) m["autoRegister"] = true;
             return m;
         }
     }

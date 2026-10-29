@@ -3,6 +3,18 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-10-29
+
+### Added
+
+- Share NPCs as cards: "Create card" in the NPC header saves the NPC as an image.
+- NPC Vault tab on the start page: browse personify.doomods.com, install a card or publish your own.
+- Remix a card into a new project. The card keeps the credit of the original author.
+
+### Changed
+
+- Needs Personnel 2.4.0. Update it along with the mod.
+
 ## [2.0.1] - 2026-10-29
 
 ### Fixed

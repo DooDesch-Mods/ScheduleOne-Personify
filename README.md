@@ -16,7 +16,7 @@
 ![Personnel](https://img.shields.io/badge/Personnel-2.4.0+-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
-[![MLVScan Personify.dll](https://mlvscan.com/attestations/att_lUsZNnoiY10TYJaCzMSm7vuj/badge.svg)](https://mlvscan.com/attestations/att_lUsZNnoiY10TYJaCzMSm7vuj)
+[![MLVScan Personify.dll](https://mlvscan.com/attestations/att_UVkHNkRT2bCSCpJeKtd_mE_y/badge.svg)](https://mlvscan.com/attestations/att_UVkHNkRT2bCSCpJeKtd_mE_y)
 
 ![The new editor next to an NPC from it in town](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/header.jpg)
 

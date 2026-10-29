@@ -7,6 +7,7 @@
        SideHustle.dll) instead of compiling in. -->
   <ItemGroup>
     <Compile Remove="Workspace/**/*.cs" />
+    <Compile Remove="tests/**" />
   </ItemGroup>
 
   <!-- Generates DooDesch.ModVersion.Current from this project's own version property, so MelonInfo carries the
@@ -93,6 +94,29 @@
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <Compile Remove="Dev/**" />
   </ItemGroup>
+
+  <!-- The editor page (Sideload surface). The LogicalName prefix is the bundle prefix passed to Surfaces.Mount. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/editor/*" Exclude="Assets/editor/mock.js;Assets/editor/preview.html">
+      <LogicalName>Personify.Assets.editor.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- The Sideload.Api shim as source, resolved like SideHustle does: the sibling Sideload checkout in the monorepo,
+       else the copy under the build libs. The shim finds the host by reflection; every call is a no-op without it. -->
+  <PropertyGroup>
+    <SideloadShimPath Condition="Exists('$(MSBuildThisFileDirectory)../Sideload/Sideload.Api/Sideload.cs')">$(MSBuildThisFileDirectory)../Sideload/Sideload.Api/Sideload.cs</SideloadShimPath>
+    <SideloadShimPath Condition="'$(SideloadShimPath)' == '' And Exists('$(WorkspaceLibPath)/sideload-api/Sideload.cs')">$(WorkspaceLibPath)/sideload-api/Sideload.cs</SideloadShimPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Condition="'$(SideloadShimPath)' != ''" Include="$(SideloadShimPath)" Link="Sideload.Api.cs" />
+  </ItemGroup>
+  <Target Name="ErrorWithoutSideloadShim" BeforeTargets="CoreCompile" Condition="'$(SideloadShimPath)' == ''">
+    <Error Text="Sideload.Api/Sideload.cs was not found next to this repo or under $(WorkspaceLibPath)/sideload-api/. The editor page cannot compile without it." />
+  </Target>
+
+  <Import Project="$(MSBuildThisFileDirectory)../Workspace/build/L10n.props" Condition="Exists('$(MSBuildThisFileDirectory)../Workspace/build/L10n.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Workspace/build/L10n.props" Condition="Exists('$(MSBuildThisFileDirectory)Workspace/build/L10n.props')" />
 
   <!-- UI icons (Lucide, ISC) embedded as Personify.Assets.Icons.<name>.png - e.g. the per-layer visibility eye. -->
   <ItemGroup>

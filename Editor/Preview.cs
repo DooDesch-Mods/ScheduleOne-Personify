@@ -117,6 +117,23 @@ namespace Personify.Editor
 
         /// <summary>How many body meshes the live avatar has - drives how many "Body mesh N" hide rows the
         /// Experimental tab shows.</summary>
+        /// <summary>The preview character's head bone, for framing the contact picture; null when there is none.</summary>
+        public static Transform HeadTransform()
+        {
+            if (!EnsureAvatar()) return null;
+            try { return _avatar._attachmentAnchorProvider != null ? _avatar._attachmentAnchorProvider.Head : null; }
+            catch (Exception e) { Core.Log?.Warning("[preview] head bone: " + e.Message); return null; }
+        }
+
+        /// <summary>The direction the preview character faces (its forward on the ground plane).</summary>
+        public static Vector3 FacingDirection()
+        {
+            if (!EnsureAvatar() || _avatar.gameObject == null) return Vector3.forward;
+            Vector3 f = _avatar.gameObject.transform.forward;
+            f.y = 0f;
+            return f.sqrMagnitude < 0.001f ? Vector3.forward : f.normalized;
+        }
+
         public static int CurrentBodyMeshCount() => EnsureAvatar() ? AvatarDistortion.BodyMeshCount(_avatar) : 0;
 
         private static Dictionary<string, (Vector3 scale, bool hide)> ToDistortionEntries(Dictionary<string, BoneDistortionDraft> src)

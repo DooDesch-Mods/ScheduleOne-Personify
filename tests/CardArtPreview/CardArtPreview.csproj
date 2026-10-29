@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Draws sample card pictures with Cards/CardArt.cs outside the game. "dotnet run" with the output folder as argument writes raw RGBA
+       files; tests/card-preview.py turns them into PNGs to look at. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <DeployVerifyDisable>true</DeployVerifyDisable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Cards/CardArt.cs" Link="Cards/CardArt.cs" />
+    <EmbeddedResource Include="../../Assets/card/*.json;../../Assets/card/*.bin">
+      <LogicalName>Personify.Assets.card.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>

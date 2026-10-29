@@ -128,7 +128,7 @@ const st = {
   wall: {},                 // project folder -> [{ id, name, face }] for the start screen
 };
 const ui = {
-  screen: 'start', search: '', roleFilter: 'all',
+  screen: 'start', startTab: 'projects', search: '', roleFilter: 'all',
   open: {},                 // area -> { sectionId: bool }
   focusField: null,         // field path a problem jump asked to show
   pick: null,               // { what:'spawn'|'step'|'car', index }
@@ -669,6 +669,16 @@ function goStart() {
   st.projects = call('projects.list') || [];
   st.packs = call('packs.list') || [];
   st.wall = call('faces.wall') || {};
+  loadCards();
+  if (ui.startTab === 'vault' && !cards.list && !cards.loading) { loadVault(false); return; }
+  renderStart();
+}
+
+const START_TABS = [['projects', T('Projects')], ['cards', T('Cards')], ['vault', T('NPC Vault')]];
+function setStartTab(id) {
+  ui.startTab = id;
+  console.log('[personify] start tab ' + id);
+  if (id === 'vault' && !cards.list && !cards.loading) { loadVault(false); return; }
   renderStart();
 }
 
@@ -722,13 +732,37 @@ function renderStart() {
   // The crew wall: one card per project, with its NPCs' faces.
   const wall = el('div', 'wall');
   const wh = el('div', 'wallh');
-  wh.appendChild(el('div', 'wallt', t('Projects')));
-  if (st.projects.length) wh.appendChild(el('div', 'wallc', String(st.projects.length)));
+  // Projects, cards and the NPC Vault share the wall; the header holds what the shown one needs.
+  const tabs = el('div', 'stabs');
+  for (const [id, label] of START_TABS) {
+    const tb = el('div', ui.startTab === id ? 'stab on' : 'stab');
+    tb.appendChild(el('div', null, t(label)));
+    const count = id === 'projects' ? st.projects.length : id === 'cards' ? cards.exports.length : 0;
+    if (count) tb.appendChild(el('div', 'wallc', String(count)));
+    tb.addEventListener('click', () => { if (ui.startTab !== id) setStartTab(id); });
+    tabs.appendChild(tb);
+  }
+  wh.appendChild(tabs);
   wh.appendChild(el('div', 'sp'));
-  wh.appendChild(btn(t('Import pack'), null, importDialog, 'import'));
-  wh.appendChild(btn(t('New project'), 'go', newProjectDialog, 'plus'));
+  if (ui.startTab === 'projects') {
+    wh.appendChild(btn(t('Import pack'), null, importDialog, 'import'));
+    wh.appendChild(btn(t('New project'), 'go', newProjectDialog, 'plus'));
+  } else if (ui.startTab === 'cards') {
+    wh.appendChild(btn(t('Card folder'), null, () => openCardFolder('import'), 'folder'));
+  } else renderVaultBar(wh);
   wall.appendChild(wh);
   const sc = el('div', 'scroll');
+  if (ui.startTab === 'cards') renderCardsTab(sc);
+  else if (ui.startTab === 'vault') renderVaultTab(sc);
+  else renderProjectsTab(sc);
+  wall.appendChild(sc);
+  cols.appendChild(wall);
+  renderPacksPanel(cols);
+  page.appendChild(cols);
+  root.appendChild(page);
+}
+
+function renderProjectsTab(sc) {
   if (st.projects.length === 0) {
     const empty = el('div', 'empty');
     empty.appendChild(el('div', 'emsg', t('No projects yet.')));
@@ -764,10 +798,9 @@ function renderStart() {
     grid.appendChild(c);
   }
   sc.appendChild(grid);
-  wall.appendChild(sc);
-  cols.appendChild(wall);
+}
 
-  // Installed packs
+function renderPacksPanel(cols) {
   const kc = el('div', 'packs glass');
   const kt = el('div', 'khd');
   kt.appendChild(el('div', 'kh', t('Installed packs')));
@@ -813,9 +846,6 @@ function renderStart() {
   }
   kc.appendChild(klist);
   cols.appendChild(kc);
-
-  page.appendChild(cols);
-  root.appendChild(page);
 }
 
 function newProjectDialog() {
@@ -880,6 +910,368 @@ function importDialog() {
   }
   box.appendChild(list);
 }
+
+/* ---------- NPC cards and the NPC Vault ---------- */
+
+// Card pictures are 900 x 1260; tiles keep that shape.
+const CARD_W = 196, CARD_H = 274;
+const ROLE_NAMES = { customer: T('Customer'), dealer: T('Dealer'), supplier: T('Supplier'), townsfolk: T('Townsfolk') };
+const VAULT_SORTS = [['new', T('New')], ['hearts', T('Hearts')], ['downloads', T('Downloads')]];
+Object.assign(ERRORS, {
+  card_busy: T('A card is already being made.'),
+  card_failed: T('The card could not be made.'),
+  preview_unavailable: T('The preview character is not available.'),
+  not_a_card: T('That picture is not an NPC card.'),
+  read_failed: T('The file could not be read.'),
+  not_allowed: T('Only files in the card folders can be added.'),
+  bad_path: T('The NPC Vault request was refused.'),
+  no_vault: T('The NPC Vault address is not set.'),
+  no_folder: T('The folder is not known.'),
+});
+
+const cards = {
+  exports: [], installed: [], folders: null,
+  vault: null,              // { connected, userName, baseUrl }
+  list: null, next: null, loading: false, failed: null,
+  q: '', sort: 'new',
+  thumbs: {},               // vault code -> s1:// picture
+  pics: {},                 // vault code -> its tile's picture box, filled in place when the picture arrives
+  reqs: {},                 // request id -> callback for "vault.reply"
+  exporting: null,          // NPC id while a card is being made
+};
+let reqSeq = 0;
+
+function vaultCall(name, arg, cb) {
+  const id = 'r' + (++reqSeq);
+  cards.reqs[id] = cb;
+  const r = call(name, Object.assign({ id }, arg));
+  if (!r || r.ok === false) { delete cards.reqs[id]; cb(false, r && r.error); }
+}
+
+function loadCards() {
+  cards.exports = call('cards.exports') || [];
+  cards.installed = call('cards.installed') || [];
+  if (!Array.isArray(cards.installed)) { console.warn('[personify] cards.installed answered ' + JSON.stringify(cards.installed)); cards.installed = []; }
+  cards.folders = call('cards.folders');
+  cards.vault = call('vault.state');
+}
+
+function roleName(r) { return t(ROLE_NAMES[r] || ROLE_NAMES.townsfolk); }
+
+function cardTile(img, title, sub, onClick) {
+  const c = el('div', 'ccard');
+  const pic = el('div', 'cpic');
+  if (img) { const i = el('img'); i.setAttribute('src', img); pic.appendChild(i); }
+  else pic.appendChild(icon('card', 'dim'));
+  c.appendChild(pic);
+  const tx = el('div', 'pt');
+  tx.appendChild(el('div', 'cnm', title));
+  if (sub) tx.appendChild(el('div', 'psub', sub));
+  c.appendChild(tx);
+  if (onClick) c.addEventListener('click', onClick);
+  c.pic = pic;
+  return c;
+}
+
+function restartNote(box) {
+  if (!cards.folders || !cards.folders.pendingRestart) return;
+  const n = el('div', 'cnote');
+  n.appendChild(icon('restart'));
+  n.appendChild(el('div', 'grow', t('Restart the game to load the changed cards.')));
+  box.appendChild(n);
+}
+
+/* --- start screen: Cards --- */
+
+function renderCardsTab(sc) {
+  restartNote(sc);
+  sc.appendChild(el('div', 'cgh', t('Your cards')));
+  if (cards.exports.length === 0) {
+    sc.appendChild(el('div', 'quiet', t('No cards yet. Open an NPC and choose Make card.')));
+  } else {
+    const grid = el('div', 'grid cgrid');
+    for (const x of cards.exports) {
+      const tile = cardTile(x.url, x.name, (x.code ? x.code.toUpperCase() + ' · ' : '') + x.sizeKb + ' KB', null);
+      const acts = el('div', 'cacts');
+      acts.appendChild(btn(t('Add to my game'), 'sm', () => installCardFile(x.path), 'install'));
+      const mb = ibtn('more', t('More'), () => openMenu(mb, [
+        { label: t('Publish to NPC Vault'), icon: 'publish', run: () => publishCard(x) },
+        { label: t('Remix as new project'), icon: 'remix', run: () => remixCard(x.path) },
+        { label: t('Show in folder'), icon: 'folder', run: () => openCardFolder('exports') },
+      ]), 'ghost');
+      acts.appendChild(mb);
+      tile.appendChild(acts);
+      grid.appendChild(tile);
+    }
+    sc.appendChild(grid);
+  }
+
+  sc.appendChild(el('div', 'cgh', t('Cards in your game')));
+  if (cards.installed.length === 0) {
+    sc.appendChild(el('div', 'quiet', t('No cards in your game. Card pictures in the card folder are added at the next start.')));
+    return;
+  }
+  for (const c of cards.installed) {
+    const r = el('div', 'krow');
+    const tx = el('div', 'pt');
+    tx.appendChild(el('div', 'pnm', c.name || c.code));
+    const bits = [roleName(c.role)];
+    if (c.creator) bits.push(t('by {author}', { author: c.creator }));
+    bits.push(String(c.code || '').toUpperCase());
+    tx.appendChild(el('div', 'psub', bits.join(' · ')));
+    if (c.basedOn) tx.appendChild(el('div', 'ptag', t('Remix of {code}', { code: String(c.basedOn).toUpperCase() })));
+    r.appendChild(tx);
+    r.appendChild(ibtn('trash', t('Remove'), () => confirmDialog(t('Remove {name}?', { name: c.name || c.code }),
+      t('Saves that contain this NPC lose it the next time they load.'), t('Remove'), () => {
+        const res = call('cards.remove', c.code);
+        if (!res || res.ok === false) toast(errText(res && res.error), 'bad');
+        else { console.log('[personify] card ' + c.code + ' removed'); toast(t('Card removed.'), 'ok'); }
+        goStart();
+      }, true), 'ghost'));
+    sc.appendChild(r);
+  }
+}
+
+function installCardFile(path) {
+  const r = call('cards.import', path);
+  if (!r) { toast(t('The editor host did not answer.'), 'bad'); return; }
+  if (r.ok === false) { toast(r.message || errText(r.error), 'bad'); return; }
+  console.log('[personify] card ' + r.code + ' installed from ' + path + (r.alreadyInstalled ? ' (already there)' : ''));
+  toast(r.alreadyInstalled ? t('{name} is already in your game.', { name: r.name }) : t('{name} added. Restart the game to meet them.', { name: r.name }), 'ok');
+  if (ui.screen === 'start') goStart();
+}
+
+function remixCard(path) {
+  const r = call('cards.remix', path);
+  if (!r || r.ok === false) { toast((r && r.text) || errText(r && r.error), 'bad'); return; }
+  console.log('[personify] remix started in ' + r.folder);
+  openProject(r.folder);
+}
+
+function openCardFolder(which) {
+  const r = call('cards.openFolder', which);
+  if (!r || r.ok === false) toast(errText(r && r.error), 'bad');
+}
+
+function publishCard(x) {
+  if (!cards.vault || !cards.vault.connected) { connectDialog(() => publishCard(x)); return; }
+  toast(t('Publishing {name}...', { name: x.name }), 'info');
+  vaultCall('vault.upload', { file: x.file }, (ok, body) => {
+    const r = ok && body && typeof body === 'object' ? body : null;
+    if (!r) { toast(errText(typeof body === 'string' ? body : null), 'bad'); return; }
+    if (r.ok) { console.log('[personify] card published as ' + r.code); toast(t('Published as {code}.', { code: String(r.code).toUpperCase() }), 'ok'); }
+    else if (r.duplicate) toast(t('This card is already in the NPC Vault as {code}.', { code: String(r.code || '').toUpperCase() }), 'warn');
+    else toast(r.message || t('Publishing failed.'), 'bad');
+  });
+}
+
+/* --- start screen: NPC Vault --- */
+
+function vaultQuery(cursor) {
+  const q = ['sort=' + cards.sort];
+  if (cards.q) q.push('q=' + encodeURIComponent(cards.q));
+  if (cursor) q.push('cursor=' + encodeURIComponent(cursor));
+  return '/api/v1/cards?' + q.join('&');
+}
+
+function loadVault(more) {
+  if (cards.loading) return;
+  cards.loading = true;
+  cards.failed = null;
+  if (!more) { cards.list = null; cards.next = null; }
+  vaultCall('vault.get', { path: vaultQuery(more ? cards.next : null) }, (ok, body) => {
+    cards.loading = false;
+    if (!ok || !body || !Array.isArray(body.cards)) {
+      cards.failed = typeof body === 'string' ? body : 'unreadable answer';
+      console.warn('[personify] vault list failed: ' + cards.failed);
+    } else {
+      cards.list = (more && cards.list ? cards.list : []).concat(body.cards);
+      cards.next = body.next || null;
+      for (const c of body.cards) if (!cards.thumbs[c.code]) call('vault.thumb', c.code);
+    }
+    if (ui.screen === 'start' && ui.startTab === 'vault') renderStart();
+  });
+  if (ui.screen === 'start' && ui.startTab === 'vault') renderStart();
+}
+
+function renderVaultBar(wh) {
+  const v = cards.vault || {};
+  if (v.connected) {
+    wh.appendChild(el('div', 'vuser', t('Signed in as {name}', { name: v.userName || '?' })));
+    wh.appendChild(btn(t('Disconnect'), 'ghost', () => {
+      call('vault.disconnect');
+      console.log('[personify] vault disconnect asked');
+    }));
+  } else {
+    wh.appendChild(btn(t('Connect'), null, () => connectDialog(null), 'link'));
+  }
+}
+
+function renderVaultTab(sc) {
+  const bar = el('div', 'vbar');
+  const q = textInput(cards.q, t('Search names and creators'), v => { if (v.trim() === cards.q) return; cards.q = v.trim(); loadVault(false); }, { cls: 'vq' });
+  q.addEventListener('keydown', e => { if (e.key === 'Enter' && q.blur) q.blur(); });
+  bar.appendChild(q);
+  bar.appendChild(segEl(VAULT_SORTS.map(([k, l]) => [k, t(l)]), cards.sort, s => { cards.sort = s; loadVault(false); }));
+  bar.appendChild(el('div', 'sp'));
+  bar.appendChild(ibtn('refresh', t('Reload'), () => loadVault(false), 'ghost'));
+  sc.appendChild(bar);
+  restartNote(sc);
+
+  if (cards.failed) {
+    const e = el('div', 'empty');
+    e.appendChild(el('div', 'emsg', t('The NPC Vault is not reachable.')));
+    e.appendChild(el('div', 'esub', cards.failed));
+    e.appendChild(btn(t('Try again'), null, () => loadVault(false), 'refresh'));
+    sc.appendChild(e);
+    return;
+  }
+  if (!cards.list) { sc.appendChild(el('div', 'quiet', t('Loading...'))); return; }
+  if (cards.list.length === 0) { sc.appendChild(el('div', 'quiet', cards.q ? t('No card matches.') : t('The NPC Vault is empty.'))); return; }
+  const grid = el('div', 'grid cgrid');
+  for (const c of cards.list) {
+    const sub = roleName(c.role) + ' · ' + t('by {author}', { author: (c.creator && c.creator.name) || '?' });
+    const tile = cardTile(cards.thumbs[c.code], c.name, sub, null);
+    cards.pics[c.code] = tile.pic;
+    const stats = el('div', 'cstat');
+    stats.appendChild(icon('heart', 'dim')); stats.appendChild(el('div', null, String(c.hearts || 0)));
+    stats.appendChild(icon('download', 'dim')); stats.appendChild(el('div', null, String(c.downloads || 0)));
+    tile.appendChild(stats);
+    const acts = el('div', 'cacts');
+    const owned = cards.installed.some(x => x.code === c.code);
+    acts.appendChild(owned ? el('div', 'cown', t('In your game')) : btn(t('Add to my game'), 'sm', () => installVaultCard(c), 'download'));
+    tile.appendChild(acts);
+    grid.appendChild(tile);
+  }
+  sc.appendChild(grid);
+  if (cards.next) sc.appendChild(btn(cards.loading ? t('Loading...') : t('Show more'), cards.loading ? 'off' : null, () => loadVault(true)));
+}
+
+function installVaultCard(c) {
+  toast(t('Adding {name}...', { name: c.name }), 'info');
+  vaultCall('vault.install', { code: c.code }, (ok, body) => {
+    const r = ok && body && typeof body === 'object' ? body : null;
+    if (!r || !r.ok) { toast((r && r.message) || errText(typeof body === 'string' ? body : null), 'bad'); return; }
+    console.log('[personify] vault card ' + c.code + ' installed');
+    toast(t('{name} added. Restart the game to meet them.', { name: r.name || c.name }), 'ok');
+    cards.installed = call('cards.installed') || cards.installed;
+    cards.folders = call('cards.folders') || cards.folders;
+    if (ui.screen === 'start') renderStart();
+  });
+}
+
+let connectBox = null;
+let afterConnect = null;
+function connectDialog(then) {
+  afterConnect = then || null;
+  const box = openDialog('small');
+  dialogHead(box, t('Connect to the NPC Vault'));
+  connectBox = el('div', 'cbody');
+  connectBox.appendChild(el('div', 'dsub', t('Asking the NPC Vault for a code...')));
+  box.appendChild(connectBox);
+  const r = call('vault.connect');
+  if (!r || r.ok === false) {
+    console.warn('[personify] vault connect refused: ' + ((r && r.error) || 'no answer'));
+    // Sideload's replaceChildren drops its arguments, so clear first and append.
+    connectBox.replaceChildren();
+    connectBox.appendChild(el('div', 'ferr', errText(r && r.error)));
+    connectBox = null;
+  }
+}
+
+function showConnect(s) {
+  if (!connectBox || !document.body.contains(connectBox)) { connectBox = null; return; }
+  connectBox.replaceChildren();
+  if (s.state === 'waiting') {
+    connectBox.appendChild(el('div', 'dsub', t('Open this page in your browser, sign in and enter the code:')));
+    connectBox.appendChild(el('div', 'curl', s.verifyUrl || ''));
+    connectBox.appendChild(el('div', 'ccode', s.userCode || ''));
+    connectBox.appendChild(el('div', 'note mu', t('The code is copied, and the page opened in your browser.')));
+  } else if (s.state === 'connected') {
+    cards.vault = call('vault.state') || cards.vault;
+    closeDialog();
+    connectBox = null;
+    toast(t('Connected as {name}.', { name: s.userName || '?' }), 'ok');
+    const then = afterConnect;
+    afterConnect = null;
+    if (then) then();
+    else if (ui.screen === 'start') renderStart();
+  } else {
+    connectBox.appendChild(el('div', 'ferr', s.message || (s.state === 'expired' ? t('The code expired.') : t('Connecting failed.'))));
+    connectBox.appendChild(btn(t('Try again'), null, () => connectDialog(afterConnect), 'refresh'));
+  }
+}
+
+/* --- editor: make a card --- */
+
+function makeCard(n) {
+  if (cards.exporting) { toast(errText('card_busy'), 'warn'); return; }
+  const r = call('cards.export', n.id);
+  if (!r || r.ok === false) { toast(errText(r && r.error), 'bad'); return; }
+  cards.exporting = n.id;
+  console.log('[personify] making a card of ' + n.id);
+  renderFields();
+}
+
+function cardDialog(x) {
+  const box = openDialog('cardd');
+  dialogHead(box, t('Card of {name}', { name: x.name }));
+  const row = el('div', 'cdrow');
+  const pic = el('div', 'cpic big');
+  const i = el('img'); i.setAttribute('src', x.url); pic.appendChild(i);
+  row.appendChild(pic);
+  const side = el('div', 'cdside');
+  side.appendChild(el('div', 'ccode sm', String(x.code || '').toUpperCase()));
+  side.appendChild(el('div', 'dsub', t('Saved as {file}.', { file: x.file })));
+  if (x.basedOn) side.appendChild(el('div', 'note mu', t('Remix of {code}', { code: String(x.basedOn).toUpperCase() })));
+  side.appendChild(el('div', 'note mu', t('The NPC lives in the picture. Share the PNG file itself; a screenshot or a compressed copy loses it.')));
+  side.appendChild(el('div', 'grow'));
+  side.appendChild(btn(t('Publish to NPC Vault'), 'go', () => { closeDialog(); publishCard(x); }, 'publish'));
+  side.appendChild(btn(t('Show in folder'), null, () => openCardFolder('exports'), 'folder'));
+  row.appendChild(side);
+  box.appendChild(row);
+}
+
+host.on('cards.exported', p => {
+  const x = parsePayload(p, 'cards.exported');
+  cards.exporting = null;
+  if (ui.screen === 'editor') renderFields();
+  if (!x) return;
+  if (!x.ok) { toast(x.text || errText(x.error), 'bad'); return; }
+  console.log('[personify] card ' + x.code + ' made: ' + x.path);
+  cardDialog(x);
+});
+host.on('vault.reply', p => {
+  const x = parsePayload(p, 'vault.reply');
+  if (!x) return;
+  const cb = cards.reqs[x.id];
+  delete cards.reqs[x.id];
+  if (!cb) { console.warn('[personify] vault reply for unknown request ' + x.id); return; }
+  cb(!!x.ok, x.body);
+});
+host.on('vault.thumb', p => {
+  const x = parsePayload(p, 'vault.thumb');
+  if (!x || !x.url) return;
+  cards.thumbs[x.code] = x.url;
+  const pic = cards.pics[x.code];
+  if (!pic || !document.body.contains(pic)) { console.log('[personify] vault thumb ' + x.code + ' arrived after its tile left the page'); return; }
+  const i = el('img');
+  i.setAttribute('src', x.url);
+  // Sideload's replaceChildren drops its arguments, so clear first and append.
+  pic.replaceChildren();
+  pic.appendChild(i);
+});
+host.on('vault.connect', p => {
+  const x = parsePayload(p, 'vault.connect');
+  if (x) showConnect(x);
+});
+host.on('vault.state', p => {
+  const x = parsePayload(p, 'vault.state');
+  if (!x) return;
+  cards.vault = x;
+  console.log('[personify] vault ' + (x.connected ? 'connected as ' + x.userName : 'disconnected'));
+  if (ui.screen === 'start') renderStart();
+});
 
 /* ---------- editor ---------- */
 
@@ -1812,6 +2204,10 @@ function renderFields() {
     sub.textContent = roleLabel(roleOf(n)) + (st.expert ? ' · ' + n.id : '');
     tx.appendChild(sub);
     E.fhead.appendChild(tx);
+    const busy = cards.exporting === n.id;
+    const mk = btn(busy ? t('Making card...') : t('Make card'), 'sm' + (cards.exporting ? ' off' : ''), () => makeCard(n), 'card');
+    tip(mk, t('Saves this NPC as a picture card you can share.'));
+    E.fhead.appendChild(mk);
   }
   const box = E.fbody;
   if (st.area === 'look') buildLook(box, n);

@@ -28,6 +28,14 @@
     "publish": "upload",
     "settings": "settings-2",
     "restart": "rotate-ccw",
-    "user": "user-round"
+    "user": "user-round",
+    "card": "id-card",
+    "folder": "folder-open",
+    "vault": "archive",
+    "link": "link",
+    "refresh": "refresh-cw",
+    "remix": "git-fork",
+    "heart": "heart",
+    "download": "download"
   }
 }

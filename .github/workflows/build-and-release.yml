@@ -386,13 +386,15 @@ jobs:
           repo: thunderstore.io
           namespace: DooDesch
           name: Personify
-          description: In-game NPC editor - design body, face, hair, clothing and tattoos live, export a ready-to-publish Personnel NPC pack.
+          description: In-game NPC editor - build NPCs with a live 3D preview, test them next to you, publish a Personnel NPC pack.
           version: ${{ needs.build.outputs.version }}
           path: thunderstore-package
           deps: |
             LavaGang-MelonLoader-0.7.3
-            ifBars-S1API_Forked-3.1.1
-            DooDesch-SideHustle-1.0.0
+            ifBars-S1API_Forked-3.2.1
+            DooDesch-SideHustle-3.2.1
+            DooDesch-Sideload-1.36.0
+            DooDesch-Personnel-2.3.0
           categories: |
             Mods
 

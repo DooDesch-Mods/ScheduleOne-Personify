@@ -426,14 +426,18 @@ function toast(text, tone) {
 }
 
 // A hover hint: mouseenter says when, rect() says where.
+// One tooltip at a time. A re-render removes its anchor without a mouseleave, so the ticker also drops a tooltip
+// whose anchor has left the document.
+let liveTip = null;
+function hideTip() { if (liveTip) { liveTip.node.remove(); liveTip = null; } }
 function tip(anchor, text) {
-  let node = null;
-  const hide = () => { if (node) { node.remove(); node = null; } };
+  const hide = () => { if (liveTip && liveTip.anchor === anchor) hideTip(); };
   anchor.addEventListener('mouseenter', () => {
-    if (node || !text) return;
+    if (!text) return;
+    hideTip();
     const r = rectOf(anchor);
     if (!r || !r.height) return;
-    node = el('div', 'tip', text);
+    const node = el('div', 'tip', text);
     const w = Math.min(320, 20 + text.length * 7);
     const vw = innerWidth || 1920;
     let left = Math.max(6, Math.min(vw - w - 6, r.x + r.width / 2 - w / 2));
@@ -441,6 +445,7 @@ function tip(anchor, text) {
     node.style.top = Math.round(r.y > 40 ? r.y - 34 : r.y + r.height + 6) + 'px';
     node.style.width = Math.round(w) + 'px';
     document.body.appendChild(node);
+    liveTip = { node, anchor };
   });
   anchor.addEventListener('mouseleave', hide);
   anchor.addEventListener('click', hide);
@@ -1580,6 +1585,26 @@ function placeNear(x, z, kinds, radius) {
   return best;
 }
 
+// Where a point is, for the reader: the nearest building or car park within 60 m, coordinates in Expert mode.
+function whereIs(x, y, z) {
+  if (st.expert) return fmtNum(x) + ', ' + fmtNum(y) + ', ' + fmtNum(z);
+  let best = null, bd = 60 * 60;
+  for (const p of (st.map && st.map.places) || []) {
+    if (p.kind === 'seat') continue;
+    const d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best ? t('Near {p}', { p: best.label || best.name }) : t('Set on the map');
+}
+
+function placeLine(row, text, button) {
+  row.classList.add('stack');
+  const line = el('div', 'placel');
+  line.appendChild(el('div', 'fv grow', text));
+  line.appendChild(button);
+  row.appendChild(line);
+}
+
 function placeByName(kind, name) {
   if (!name || !st.map) return null;
   return st.map.places.find(p => p.kind === kind && p.name === name) || null;
@@ -2435,8 +2460,8 @@ function customerFields(b) {
     });
     chips.appendChild(c);
   }
+  if (!cur) chips.appendChild(el('div', 'chip on', profs.some(p => p !== profs[0]) ? t('Mixed') : t('Own values')));
   row.appendChild(chips);
-  if (!cur) line(b, profs.some(p => p !== profs[0]) ? t('Mixed') : t('Own values'), 'mu');
 
   if (st.expert) {
     slider(b, T('Spends from'), 'customer.spending.min', { min: 0, max: 5000, step: 10, def: 200, whole: true, pair: ['customer.spending.max', 500], fmt: money, after: renderFields });
@@ -2648,9 +2673,8 @@ function buildRoutine(box, n) {
   section(box, 'spawn', T('Start point'), b => {
     const sp = n.spawn || {};
     const row = frow(b, T('Position'), 'spawn');
-    row.appendChild(el('div', 'fv grow', typeof sp.x === 'number' ? fmtNum(sp.x) + ', ' + fmtNum(sp.y) + ', ' + fmtNum(sp.z) : t('Not set')));
     const picking = ui.pick && ui.pick.what === 'spawn';
-    row.appendChild(btn(picking ? t('Click the map') : t('Pick on map'), 'xs' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what: 'spawn' })));
+    placeLine(row, typeof sp.x === 'number' ? whereIs(sp.x, sp.y, sp.z) : t('Not set'), btn(picking ? t('Click the map') : t('Pick on map'), 'xs pk' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what: 'spawn' }), 'pin'));
     const regions = (st.world && st.world.regions && st.world.regions.length) ? st.world.regions : REGIONS;
     selectRow(b, T('Region'), 'spawn.region', regions.map(r => [r, r]), '', { none: true, noneLabel: t('Not set') });
     if (st.expert) slider(b, T('Facing'), 'spawn.rotationY', { min: 0, max: 359, def: 0, whole: true, fmt: v => Math.round(v) + '\u00b0' });
@@ -2766,14 +2790,13 @@ function stepCard(s, i, steps) {
 
   const pickBtn = (what, label) => {
     const picking = ui.pick && ui.pick.what === what && ui.pick.index === i;
-    return btn(picking ? t('Click the map') : t(label), 'xs' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what, index: i }));
+    return btn(picking ? t('Click the map') : t(label), 'xs pk' + (picking ? ' now' : '') + (st.map && st.map.hasMap ? '' : ' off'), () => startPick({ what, index: i }), 'pin');
   };
 
   if (POINT_TYPES.indexOf(s.type) >= 0) {
     const pr = field(T('Place'));
     const p = s.position;
-    pr.appendChild(el('div', 'fv grow', Array.isArray(p) && p.length >= 3 ? fmtNum(p[0]) + ', ' + fmtNum(p[1]) + ', ' + fmtNum(p[2]) : t('Not set')));
-    pr.appendChild(pickBtn('step', T('Pick on map')));
+    placeLine(pr, Array.isArray(p) && p.length >= 3 ? whereIs(p[0], p[1], p[2]) : t('Not set'), pickBtn('step', T('Pick on map')));
   }
 
   if (s.type === 'walkTo') {
@@ -2835,8 +2858,7 @@ function stepCard(s, i, steps) {
     if (code) {
       const cp = field(T('Car appears at'));
       const p = s.createVehicle.position;
-      cp.appendChild(el('div', 'fv grow', Array.isArray(p) ? fmtNum(p[0]) + ', ' + fmtNum(p[2]) : t('Next to the NPC')));
-      cp.appendChild(pickBtn('car', T('Pick on map')));
+      placeLine(cp, Array.isArray(p) ? whereIs(p[0], p[1] || 0, p[2]) : t('Next to the NPC'), pickBtn('car', T('Pick on map')));
     } else stepText(body, T('Car name'), s, 'vehicle', edit);
   }
 
@@ -3105,6 +3127,7 @@ host.on('editor.key', p => {
 
 // The stage rect and the list heights are only known after a render; a light poll catches every size change.
 setInterval(() => {
+  if (liveTip && !document.body.contains(liveTip.anchor)) hideTip();
   reportStage();
   watchStageBox();
   for (const v of lists) {

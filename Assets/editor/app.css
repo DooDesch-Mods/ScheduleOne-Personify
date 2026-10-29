@@ -68,6 +68,9 @@ body.swept { opacity: 1; }
 .btn .lu { width: 16px; height: 16px; }
 .btn.sm { height: 34px; padding: 0 12px; font-size: 13px; }
 .btn.xs { height: 28px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
+.btn.xs .lu { width: 14px; height: 14px; }
+.btn.pk { gap: 6px; background-color: var(--s3); }
+.btn.pk:hover { background-color: var(--s4); }
 .btn.big { height: 52px; padding: 0 24px; font-size: 17px; border-radius: 12px; }
 .btn.big .lu { width: 20px; height: 20px; }
 .btn.go { background: linear-gradient(180deg, var(--cashhi), var(--cash)); color: var(--oncash); }
@@ -103,6 +106,7 @@ body.swept { opacity: 1; }
 }
 textarea.inp { height: 72px; padding: 9px 12px; }
 .inp.code { height: 160px; font-size: 13px; }
+.fr .inp { flex-grow: 1; min-width: 0; }
 .inp.num { width: 76px; flex-grow: 0; height: 32px; text-align: right; }
 .inp.search { height: 38px; }
 .inp.nameinp { height: 46px; padding: 0 10px; margin-left: -10px; font-size: 24px; font-weight: 800; background-color: var(--glass); }
@@ -293,6 +297,8 @@ textarea.inp { height: 72px; padding: 9px 12px; }
 .fr.hl, .lr.hl, .df.hl, .vars.hl, .chips.hl, .day.hl, .step.hl, .conns.hl { background-color: var(--warnbg); border: 1px solid var(--warn); padding: 6px; }
 .fl { width: 128px; font-size: 14px; color: var(--mu); flex: none; }
 .fr.stack .fl { width: auto; }
+.placel { flex-direction: row; align-items: center; gap: 10px; }
+.placel .fv { text-align: left; }
 .fv { min-width: 56px; font-size: 14px; font-weight: 700; text-align: right; }
 .fv.def { color: var(--mu); font-weight: 400; }
 /* A slider in plain words: the two ends named, the number only in Expert. */
@@ -347,7 +353,7 @@ textarea.inp { height: 72px; padding: 9px 12px; }
 .step.on { border-color: var(--neon); }
 .stph { flex-direction: row; align-items: center; gap: 8px; height: 40px; padding: 0 10px; border-radius: 8px; }
 .stph:hover { background-color: var(--s3); }
-.stpn { width: 22px; height: 22px; border-radius: 11px; background-color: var(--s4); font-size: 12px; font-weight: 800; align-items: center; justify-content: center; }
+.stpn { width: 22px; height: 22px; border-radius: 11px; background-color: var(--s4); font-size: 12px; font-weight: 800; color: var(--mu); align-items: center; justify-content: center; text-align: center; flex: none; }
 .step.on .stpn { background-color: var(--neon); color: #16051A; }
 .stpt { font-size: 14px; font-weight: 600; }
 .stpd { font-size: 12px; color: var(--mu); max-width: 170px; }

@@ -115,8 +115,25 @@ namespace Personify.Editor
             catch (Exception e) { return "live summary threw: " + e.Message; }
         }
 
+        /// <summary>The preview character's head bone, for framing the contact picture; null when there is none.</summary>
+        public static Transform HeadTransform()
+        {
+            if (!EnsureAvatar()) return null;
+            try { return _avatar._attachmentAnchorProvider != null ? _avatar._attachmentAnchorProvider.Head : null; }
+            catch (Exception e) { Core.Log?.Warning("[preview] head bone: " + e.Message); return null; }
+        }
+
+        /// <summary>The direction the preview character faces (its forward on the ground plane).</summary>
+        public static Vector3 FacingDirection()
+        {
+            if (!EnsureAvatar() || _avatar.gameObject == null) return Vector3.forward;
+            Vector3 f = _avatar.gameObject.transform.forward;
+            f.y = 0f;
+            return f.sqrMagnitude < 0.001f ? Vector3.forward : f.normalized;
+        }
+
         /// <summary>How many body meshes the live avatar has - drives how many "Body mesh N" hide rows the
-        /// Experimental tab shows.</summary>
+        /// expert view shows.</summary>
         public static int CurrentBodyMeshCount() => EnsureAvatar() ? AvatarDistortion.BodyMeshCount(_avatar) : 0;
 
         private static Dictionary<string, (Vector3 scale, bool hide)> ToDistortionEntries(Dictionary<string, BoneDistortionDraft> src)
@@ -335,7 +352,8 @@ namespace Personify.Editor
         private static int _origSibling;
         private static Camera _menuCam;
         private static Vector3 _origCamPos;
-        private static bool _camCaptured;
+        private static Quaternion _origCamRot;
+        private static bool _camCaptured, _framed;
         private static float _baseDist;
         private static int _zoomPercent = 100;
         public static int ZoomPercent => _zoomPercent;
@@ -360,7 +378,8 @@ namespace Personify.Editor
             catch (Exception e) { Core.Log?.Warning("[preview] rotate: " + e.Message); }
         }
 
-        private static Camera FindMenuCamera()
+        /// <summary>The camera the main menu renders with; Camera.main is null there, so the first enabled camera counts.</summary>
+        public static Camera FindMenuCamera()
         {
             if (_menuCam != null) return _menuCam;
             if (Camera.main != null) { _menuCam = Camera.main; return _menuCam; }
@@ -375,6 +394,41 @@ namespace Personify.Editor
             return _menuCam;
         }
 
+        private static void CaptureCamera(Camera cam)
+        {
+            if (_camCaptured) return;
+            _origCamPos = cam.transform.position;
+            _origCamRot = cam.transform.rotation;
+            _camCaptured = true;
+        }
+
+        /// <summary>
+        /// Puts the menu camera in front of the preview character so the whole body fills the stage. The menu framing
+        /// keeps the character at the screen's left edge, which lands off-centre and small once the camera draws
+        /// into the stage only. Runs once per editor visit; zoom then moves along the same line.
+        /// </summary>
+        public static void FrameCamera()
+        {
+            if (_framed) return;
+            if (!EnsureAvatar() || _avatar.gameObject == null) return;
+            var cam = FindMenuCamera();
+            if (cam == null) { Core.Log?.Warning("[preview] no camera to frame the preview character with."); return; }
+            try
+            {
+                CaptureCamera(cam);
+                Vector3 target = _avatar.gameObject.transform.position + Vector3.up * 0.95f;
+                // 1.15 m half-height around the target keeps head and feet inside the frame with a little air.
+                float dist = 1.15f / Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad);
+                Vector3 from = target + FacingDirection() * dist + Vector3.up * 0.15f;
+                cam.transform.SetPositionAndRotation(from, Quaternion.LookRotation(target - from, Vector3.up));
+                _baseDist = (target - from).magnitude;
+                _zoomPercent = 100;
+                _framed = true;
+                Core.Log?.Msg($"[preview] camera framed on the preview character ({_baseDist:0.00} m, fov {cam.fieldOfView:0}).");
+            }
+            catch (Exception e) { Core.Log?.Warning("[preview] framing the camera failed: " + e.Message); }
+        }
+
         public static void ZoomCamera(float delta)
         {
             if (!EnsureAvatar()) return;
@@ -382,7 +436,7 @@ namespace Personify.Editor
             {
                 var cam = FindMenuCamera();
                 if (cam == null || _avatar.gameObject == null) return;
-                if (!_camCaptured) { _origCamPos = cam.transform.position; _camCaptured = true; }
+                CaptureCamera(cam);
                 Vector3 target = _avatar.gameObject.transform.position + Vector3.up * 1.1f;
                 Vector3 to = target - cam.transform.position;
                 float dist = to.magnitude;
@@ -405,10 +459,10 @@ namespace Personify.Editor
                     if (at != null && _origParent != null) { at.SetParent(_origParent, true); at.SetSiblingIndex(_origSibling); }
                     UnityEngine.Object.Destroy(_pivot.gameObject);
                 }
-                if (_menuCam != null && _camCaptured) _menuCam.transform.position = _origCamPos;
+                if (_menuCam != null && _camCaptured) _menuCam.transform.SetPositionAndRotation(_origCamPos, _origCamRot);
             }
             catch (Exception e) { Core.Log?.Warning("[preview] restoring the rig failed: " + e.Message); }
-            _pivot = null; _origParent = null; _menuCam = null; _camCaptured = false; _baseDist = 0f; _zoomPercent = 100;
+            _pivot = null; _origParent = null; _menuCam = null; _camCaptured = false; _framed = false; _baseDist = 0f; _zoomPercent = 100;
         }
 
         // ---- helpers -------------------------------------------------------------------------------------------

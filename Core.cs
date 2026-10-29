@@ -22,6 +22,12 @@ namespace Personify
         {
             Instance = this;
             Log = LoggerInstance;
+            Project.ProjectLog.Info = m => Log.Msg(m);
+            Project.ProjectLog.Warn = m => Log.Warning(m);
+            Project.ProjectLog.Error = m => Log.Error(m);
+            Project.ProjectFiles.Root = Editor.Paths.Projects;
+            Host.Localization.Register();
+            App.PhoneApp.Register();
 
             try
             {
@@ -44,9 +50,9 @@ namespace Personify
             }
         }
 
-        private static void OnLaunch(LaunchContext ctx) => Editor.EditorUI.Open(ctx);
+        private static void OnLaunch(LaunchContext ctx) => Host.EditorHost.Open(ctx);
 
-        private static void OnExit(LaunchContext ctx) => Editor.EditorUI.Close();
+        private static void OnExit(LaunchContext ctx) => Host.EditorHost.Close();
 
         // The World tab's map comes out of a loaded save; see Editor.World.WorldCapture.
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)
@@ -58,22 +64,19 @@ namespace Personify
         {
             if (sceneName == "Menu")
             {
-                Editor.EditorUI.Close();
+                Host.EditorHost.Close();
                 Editor.Preview.Forget();
             }
         }
 
         public override void OnUpdate()
         {
-#if DEBUG
-            Editor.EditorUI.SelfTestTick();
-#endif
-            if (Editor.EditorUI.IsOpen) Editor.EditorUI.Tick();
+            if (Host.EditorHost.IsOpen) Host.EditorHost.Tick();
         }
 
         public override void OnLateUpdate()
         {
-            if (Editor.EditorUI.IsOpen) Editor.EditorUI.LateTick();
+            if (Host.EditorHost.IsOpen) Host.EditorHost.LateTick();
         }
     }
 }

@@ -52,6 +52,9 @@ namespace Personify.Host
         /// the queue: the queue does not move while an export holds the character.</summary>
         internal static bool Rendering => _current != null;
 
+        /// <summary>The NPC whose face is on the preview character, or null.</summary>
+        internal static JObject CurrentNpc => _current?.Npc;
+
         /// <summary>A newly mounted page knows no pictures yet, and an unmounted one wants no more.</summary>
         internal static void Reset()
         {

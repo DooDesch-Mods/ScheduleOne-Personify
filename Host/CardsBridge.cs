@@ -46,6 +46,9 @@ namespace Personify.Host
         /// <summary>True while an export holds the preview character.</summary>
         internal static bool Busy => _job != null;
 
+        /// <summary>The NPC whose card is being made, or null.</summary>
+        internal static JObject CurrentNpc => _job?.Project.FindNpc(_job.NpcId);
+
         // ---- export ------------------------------------------------------------------------------------------------
 
         internal static JObject StartExport(PackProject p, string npcId)

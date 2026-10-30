@@ -132,8 +132,14 @@ namespace Personify.Host
 
         internal static void LateTick()
         {
-            if (Faces.Busy || CardsBridge.Busy) return;
-            var npc = _previewId == null ? null : Project?.FindNpc(_previewId);
+            // The animator writes the head bone again every frame, so whoever wears the preview character needs its
+            // distortion back each frame: a face or card render otherwise shows the head at its normal size.
+            var npc = Faces.CurrentNpc ?? CardsBridge.CurrentNpc;
+            if (npc == null)
+            {
+                if (Faces.Busy) return;
+                npc = _previewId == null ? null : Project?.FindNpc(_previewId);
+            }
             if (npc != null) LookBridge.ReassertDistortion(npc);
         }
 

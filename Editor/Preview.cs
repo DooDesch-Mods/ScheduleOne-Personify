@@ -60,6 +60,9 @@ namespace Personify.Editor
                 _baselineLocked = true;
                 AvatarSettings s = BuildSettings(project, npc.Appearance);
                 if (s == null) return false;
+                // Hair and hats attach under the head bone. Loaded under the previous NPC's scale they keep it for
+                // good, and under a hidden head (scale 0) they never show again.
+                AvatarDistortion.Apply(_avatar, null);
                 AvatarLayerSlots.LoadAndClean(_avatar, s);
                 AvatarDistortion.Apply(_avatar, ToDistortionEntries(npc.Appearance.Distortion));
                 return true;

@@ -13,7 +13,7 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.4.0+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.4.2+-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_UVkHNkRT2bCSCpJeKtd_mE_y/badge.svg)](https://mlvscan.com/attestations/att_UVkHNkRT2bCSCpJeKtd_mE_y)

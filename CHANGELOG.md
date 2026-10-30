@@ -3,6 +3,19 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-10-31
+
+### Fixed
+
+- Making a card right after opening a project no longer hangs while contact pictures are still drawing.
+- Cards and contact pictures show big, tiny and missing heads. Hair no longer goes wrong on the NPCs after them.
+- Custom body pictures stay in their list position in the editor and on cards. They no longer vanish under underwear
+  or clothing.
+
+### Changed
+
+- Needs Personnel 2.4.2. Update it along with the mod.
+
 ## [2.1.0] - 2026-10-29
 
 ### Added

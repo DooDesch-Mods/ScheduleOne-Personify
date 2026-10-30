@@ -257,6 +257,11 @@ namespace Personify.Editor
                 ls.layerTint = Hex(l.Tint, Color.white);
                 dst.Add(ls);
             }
+            if (face) return;
+            // The game draws by each layer's order, so the list position has to be handed over to the pictures.
+            var paths = new List<string>();
+            foreach (AvatarSettings.LayerSetting ls in dst) paths.Add(ls.layerPath);
+            AvatarLook.OrderCustomBodyLayers(paths);
         }
 
         private static string SourceLayer(bool face) =>

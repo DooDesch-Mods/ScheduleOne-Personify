@@ -114,8 +114,9 @@ namespace Personify.Host
 
             if (_stageOn) ApplyCamera();
             // Face renders borrow the preview character; the shown NPC goes back on when they are done.
-            // Face renders and card exports both borrow the preview character, one at a time.
-            if (!CardsBridge.Busy)
+            // Face renders and card exports both borrow the preview character, one at a time. A face already on the
+            // character finishes first: the export waits for it, so stopping it here would hold both forever.
+            if (!CardsBridge.Busy || Faces.Rendering)
             {
                 try { Faces.Tick(); }
                 catch (Exception e) { Core.Log.Error($"[faces] rendering failed ({e.GetType().Name}: {e.Message}); the queue is dropped."); Faces.Reset(); ReapplyPreview(); }

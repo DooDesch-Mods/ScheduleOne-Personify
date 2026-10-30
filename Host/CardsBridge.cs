@@ -31,6 +31,13 @@ namespace Personify.Host
         private const int RigLayer = 20;
         private const int SettleFrames = 4;
         private const int HeadSize = 292;
+        /// <summary>Highest point of the body render in metres: just under the 7-foot rule (2.13 m), whose strip the
+        /// site reads as bare chart.</summary>
+        private const float ChartFitMeters = 2.1f;
+        /// <summary>Hair and hats above the head bone of a normal-sized NPC, in metres.</summary>
+        private const float HeadAllowance = 0.3f;
+        /// <summary>Head bone height of a normal-sized NPC (most stand between 1.5 and 1.66 m).</summary>
+        private const float NormalHeadBone = 1.6f;
         /// <summary>Renders are drawn this many times larger and reduced, which smooths the edges.</summary>
         private const int Supersample = 2;
 
@@ -290,9 +297,22 @@ namespace Personify.Host
             // The character's root stands on the ground, so the chart starts there. Skinned mesh bounds are no help:
             // they are far larger than the body.
             Vector3 feet = root.position;
-            var target = feet + Vector3.up * half;
             var head = Preview.HeadTransform();
             Core.Log.Msg($"[cards] '{id}': feet at {feet.y:0.00}, head bone {(head != null ? (head.position.y - feet.y).ToString("0.00") + " m above" : "missing")}.");
+            // An NPC taller than the chart is drawn smaller, feet still on the floor, so the head stays below the 7-foot
+            // rule instead of being cut off. Hair and hats reach up to HeadAllowance above the head bone of a normal-sized
+            // NPC; a scaled-up NPC has a scaled-up head, so the allowance grows with it.
+            if (head != null)
+            {
+                float bone = head.position.y - feet.y;
+                float top = bone + HeadAllowance * Math.Max(1f, bone / NormalHeadBone);
+                if (top > ChartFitMeters)
+                {
+                    half *= top / ChartFitMeters;
+                    Core.Log.Msg($"[cards] '{id}': about {top:0.00} m tall, drawn at {ChartFitMeters / top:0.00} of true scale to fit the chart.");
+                }
+            }
+            var target = feet + Vector3.up * half;
             return Shoot(root, target, Preview.FacingDirection(), true, half, 3f, CardArt.ChartWidth, CardArt.ChartHeight, id, "body");
         }
 

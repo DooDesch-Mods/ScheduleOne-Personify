@@ -1130,7 +1130,7 @@ function renderVaultTab(sc) {
   if (cards.list.length === 0) { sc.appendChild(el('div', 'quiet', cards.q ? t('No card matches.') : t('The NPC Vault is empty.'))); return; }
   const grid = el('div', 'grid cgrid');
   for (const c of cards.list) {
-    const sub = roleName(c.role) + ' · ' + t('by {author}', { author: (c.creator && c.creator.name) || '?' });
+    const sub = roleName(c.role) + ' · ' + t('by {author}', { author: c.author || (c.creator && c.creator.name) || '?' });
     const tile = cardTile(cards.thumbs[c.code], c.name, sub, null);
     cards.pics[c.code] = tile.pic;
     const stats = el('div', 'cstat');

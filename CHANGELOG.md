@@ -3,6 +3,16 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.3] - 2026-10-31
+
+### Changed
+
+- Needs Personnel 2.4.4, the first version MLVScan 2.1.7 does not disable.
+
+### Fixed
+
+- Very tall NPCs keep their head on the card: anyone taller than the chart is drawn smaller to fit.
+
 ## [2.1.2] - 2026-10-31
 
 ### Fixed

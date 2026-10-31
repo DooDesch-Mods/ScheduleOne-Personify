@@ -12,6 +12,7 @@ using NPCManager = Il2CppScheduleOne.NPCs.NPCManager;
 using MapPositionUtility = Il2CppScheduleOne.Map.MapPositionUtility;
 using NPCEnterableBuilding = Il2CppScheduleOne.Map.NPCEnterableBuilding;
 using ParkingLot = Il2CppScheduleOne.Map.ParkingLot;
+using StaticDoor = Il2CppScheduleOne.Doors.StaticDoor;
 using VehicleManager = Il2CppScheduleOne.Vehicles.VehicleManager;
 
 namespace Personify.Editor.World
@@ -156,9 +157,17 @@ namespace Personify.Editor.World
                 if (b == null || string.IsNullOrWhiteSpace(b.BuildingName) || HiddenBuildings.Contains(b.BuildingName)) continue;
                 Vector3 at = b.transform.position;
                 var doors = b.Doors;
-                if (doors != null && doors.Length > 0 && doors[0] != null)
-                    at = doors[0].AccessPoint != null ? doors[0].AccessPoint.position : doors[0].transform.position;
-                w.Places.Add(new Place { Kind = "building", Name = b.BuildingName, X = at.x, Y = at.y, Z = at.z });
+                StaticDoor door = null, usable = null;
+                for (int i = 0; doors != null && i < doors.Length; i++)
+                {
+                    if (doors[i] == null) continue;
+                    if (door == null) door = doors[i];
+                    if (usable == null && doors[i].Usable) usable = doors[i];
+                }
+                door = usable ?? door;
+                if (door != null) at = door.AccessPoint != null ? door.AccessPoint.position : door.transform.position;
+                if (usable == null) Core.Log?.Msg($"[world] '{b.BuildingName}' has no door an NPC can use - not offered for schedules.");
+                w.Places.Add(new Place { Kind = "building", Name = b.BuildingName, X = at.x, Y = at.y, Z = at.z, NoDoor = usable == null });
                 buildings++;
             }
 

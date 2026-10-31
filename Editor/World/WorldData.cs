@@ -16,6 +16,8 @@ namespace Personify.Editor.World
         [JsonProperty("x")] public float X { get; set; }
         [JsonProperty("y")] public float Y { get; set; }
         [JsonProperty("z")] public float Z { get; set; }
+        /// <summary>A building without a door an NPC may use. A stay-in-building step there throws, so the editor does not offer it.</summary>
+        [JsonProperty("noDoor", DefaultValueHandling = DefaultValueHandling.Ignore)] public bool NoDoor { get; set; }
 
         [JsonIgnore] public Vector3 Position => new Vector3(X, Y, Z);
 
@@ -65,8 +67,8 @@ namespace Personify.Editor.World
     /// </summary>
     public sealed class WorldData
     {
-        // 2: vehicles. 3: npcs. An older file loads as missing, so the next save load captures again.
-        public const int FormatVersion = 3;
+        // 2: vehicles. 3: npcs. 4: buildings without a usable door. An older file loads as missing, so the next save load captures again.
+        public const int FormatVersion = 4;
 
         [JsonProperty("format")] public int Format { get; set; } = FormatVersion;
         [JsonProperty("gameVersion")] public string GameVersion { get; set; } = "";

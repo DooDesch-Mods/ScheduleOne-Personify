@@ -44,7 +44,8 @@ namespace Personify.Project
         public static int ErrorCount(List<Problem> list) => list.FindAll(p => p.severity == "error").Count;
 
         /// <param name="catalog">NPCs of the last loaded save; null when no save was loaded yet (connection checks skipped).</param>
-        public static List<Problem> Check(PackProject p, IReadOnlyList<KnownNpc> catalog = null)
+        /// <param name="doorless">Buildings without a door an NPC may use, from the captured world; null when no world was captured yet (door checks skipped).</param>
+        public static List<Problem> Check(PackProject p, IReadOnlyList<KnownNpc> catalog = null, ISet<string> doorless = null)
         {
             var list = new List<Problem>();
             if (string.IsNullOrWhiteSpace(p.Name)) Add(list, "error", "pack_name_missing", -1, "pack", "name", null, "The pack needs a name.");
@@ -73,6 +74,7 @@ namespace Personify.Project
                 CheckFiles(list, p, n, i);
                 CheckRole(list, n, i);
                 CheckRelations(list, n, i, id, own, catalog == null ? null : known);
+                if (doorless != null) CheckDoors(list, n, i, doorless);
             }
             return list;
         }
@@ -136,6 +138,23 @@ namespace Personify.Project
                 if ((bool?)n["spawn"]?["physical"] == false)
                     Add(list, "warning", "supplier_not_physical", i, "routine", "spawn.physical", null, "A supplier always stands in the world; 'phone contact only' is ignored.");
             }
+        }
+
+        // Personnel skips such a step at runtime; a step that names its own door walks to that door and works.
+        private static void CheckDoors(List<Problem> list, JObject n, int i, ISet<string> doorless)
+        {
+            if (n["schedule"] is JArray schedule)
+                foreach (var step in schedule)
+                {
+                    string building = (string)step?["building"];
+                    if (building != null && step["doorIndex"] == null && doorless.Contains(building)
+                        && string.Equals((string)step["type"], "stayInBuilding", StringComparison.OrdinalIgnoreCase))
+                        Add(list, "warning", "building_no_door", i, "routine", "schedule", building, "No NPC can enter this building; the step is skipped.");
+                }
+
+            string home = (string)n["dealer"]?["home"];
+            if (home != null && doorless.Contains(home))
+                Add(list, "warning", "building_no_door", i, "role", "dealer.home", home, "No NPC can enter the dealer's home.");
         }
 
         private static void CheckRelations(List<Problem> list, JObject n, int i, string id, HashSet<string> own, Dictionary<string, KnownNpc> known)

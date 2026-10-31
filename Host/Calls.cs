@@ -359,7 +359,7 @@ namespace Personify.Host
         }
 
         internal static JArray ProblemsJson(PackProject p)
-            => new JArray(Problems.Check(p, GameData.KnownNpcs()).Select(x => new JObject
+            => new JArray(Problems.Check(p, GameData.KnownNpcs(), WorldBridge.DoorlessBuildings()).Select(x => new JObject
             {
                 ["severity"] = x.severity, ["code"] = x.code, ["npc"] = x.npc, ["area"] = x.area,
                 ["field"] = x.field, ["arg"] = x.arg, ["text"] = x.text,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
@@ -23,7 +24,7 @@ namespace Personify.Host
             {
                 ["hasWorld"] = w != null,
                 ["hasNpcs"] = npcs != null,
-                ["buildings"] = new JArray((w?.Places.Where(p => p.Kind == "building").Select(p => p.Name).Distinct().OrderBy(n => n) ?? Enumerable.Empty<string>()).ToArray<object>()),
+                ["buildings"] = new JArray((w?.Places.Where(p => p.Kind == "building" && !p.NoDoor).Select(p => p.Name).Distinct().OrderBy(n => n) ?? Enumerable.Empty<string>()).ToArray<object>()),
                 ["regions"] = new JArray((w?.RegionNames ?? new System.Collections.Generic.List<string>()).ToArray<object>()),
                 ["npcs"] = new JArray((npcs ?? new System.Collections.Generic.List<GameData.CatalogNpc>()).Select(n => new JObject
                 {
@@ -31,6 +32,13 @@ namespace Personify.Host
                 })),
                 ["items"] = GameData.Items(),
             };
+        }
+
+        /// <summary>Buildings a stay-in-building step cannot enter, for the problem list.</summary>
+        internal static HashSet<string> DoorlessBuildings()
+        {
+            var w = WorldData.Current;
+            return w == null ? null : new HashSet<string>(w.Places.Where(p => p.Kind == "building" && p.NoDoor).Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
         }
 
         internal static JObject Map()
@@ -57,7 +65,7 @@ namespace Personify.Host
                 ["hasMap"] = _mapSent,
                 ["image"] = "s1://" + MapImage,
                 ["minX"] = w.MinX, ["minZ"] = w.MinZ, ["maxX"] = w.MaxX, ["maxZ"] = w.MaxZ,
-                ["places"] = new JArray(w.Places.Select(p => new JObject
+                ["places"] = new JArray(w.Places.Where(p => !p.NoDoor).Select(p => new JObject
                 {
                     ["kind"] = p.Kind == "parking" ? "carpark" : p.Kind, ["name"] = string.IsNullOrEmpty(p.Path) ? p.Name : p.Path, ["label"] = p.Label,
                     ["x"] = Math.Round(p.X, 2), ["y"] = Math.Round(p.Y, 2), ["z"] = Math.Round(p.Z, 2),

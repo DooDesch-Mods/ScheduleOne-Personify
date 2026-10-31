@@ -378,6 +378,8 @@
   "The character standing in the main menu.": "Der Charakter im Hauptmenü.",
   "The contact picture could not be taken.": "Das Kontaktbild ließ sich nicht aufnehmen.",
   "The dealer has no home.": "Der Dealer hat kein Zuhause.",
+  "No NPC can enter this building; the step is skipped.": "Kein NPC kann dieses Gebäude betreten; der Schritt entfällt.",
+  "No NPC can enter the dealer's home.": "Kein NPC kann das Zuhause des Dealers betreten.",
   "The editor host did not answer.": "Der Editor antwortet nicht.",
   "The game could not restart.": "Das Spiel konnte nicht neu starten.",
   "The game restarts with the test.": "Das Spiel startet mit dem Test neu.",

@@ -93,6 +93,17 @@ try
     var noCat = Problems.Check(bad, null);
     Check("without a catalog no connection_unknown", !noCat.Exists(x => x.code == "connection_unknown"));
 
+    var doorless = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Pawn Shop" };
+    var doors = ProjectFiles.Create("Doors", "");
+    doors.Npcs.Add(new JObject { ["id"] = "door_a", ["name"] = "A", ["schedule"] = JArray.Parse("[{\"type\":\"stayInBuilding\",\"time\":\"10:45\",\"building\":\"pawn shop\"},{\"type\":\"stayInBuilding\",\"time\":\"12:15\",\"building\":\"Cafe\"}]") });
+    doors.Npcs.Add(new JObject { ["id"] = "door_b", ["name"] = "B", ["schedule"] = JArray.Parse("[{\"type\":\"stayInBuilding\",\"time\":\"10:45\",\"building\":\"Pawn Shop\",\"doorIndex\":0}]") });
+    doors.Npcs.Add(new JObject { ["id"] = "door_c", ["name"] = "C", ["dealer"] = new JObject { ["home"] = "Pawn Shop" } });
+    var doorProblems = Problems.Check(doors, null, doorless).FindAll(x => x.code == "building_no_door");
+    Check("a step into a doorless building warns", doorProblems.Exists(x => x.npc == 0 && x.area == "routine" && x.arg == "pawn shop" && x.severity == "warning"));
+    Check("a usable building and a step with its own door do not warn", doorProblems.FindAll(x => x.area == "routine").Count == 1);
+    Check("a dealer home in a doorless building warns", doorProblems.Exists(x => x.npc == 2 && x.field == "dealer.home"));
+    Check("without a captured world no door warning", !Problems.Check(doors).Exists(x => x.code == "building_no_door"));
+
     // 4. Install, state, rename, blocked.
     Check("state before install", Installer.State(mig, packs) == "not_installed");
     var ir = Installer.Install(mig, packs);

@@ -1,0 +1,172 @@
+:root {
+  --bg: #0F1216;
+  --panel: #171B21;
+  --panel-hover: #1E232B;
+  --hairline: #262C35;
+  --text: #ECEDF1;
+  --muted: #8C93A0;
+  --accent: #3E7BFA;
+  --accent-hover: #5A8FFB;
+  --accent-down: #2F66D6;
+  --good: #4FBF85;
+  --bad: #E5675C;
+}
+
+body {
+  height: 100%;
+  font-family: game-ui;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.screen {
+  height: 100%;
+  background: var(--bg);
+}
+
+/* ---- header ---------------------------------------------------------------------------------------------- */
+
+.bar {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.back {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+  color: var(--text);
+}
+.back:hover { background: var(--panel-hover); }
+
+.titles { flex: 1; min-width: 0; }
+.title { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+
+.ic { width: 20px; height: 20px; }
+
+/* ---- body ------------------------------------------------------------------------------------------------ */
+
+.body {
+  flex: 1;
+  min-height: 0;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+  gap: 6px;
+}
+
+.row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--panel);
+}
+.row:hover { background: var(--panel-hover); }
+
+.row-text { flex: 1; min-width: 0; gap: 2px; }
+.row-name { font-weight: 600; white-space: nowrap; overflow: hidden; }
+.row-meta { font-size: 12px; color: var(--muted); }
+.row .ic { color: var(--muted); }
+
+.empty {
+  padding: 16px 4px;
+  color: var(--muted);
+}
+
+/* ---- NPC screen ------------------------------------------------------------------------------------------ */
+
+.npc {
+  flex: 1;
+  min-height: 0;
+}
+
+.section { gap: 6px; padding-bottom: 10px; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.value { color: var(--text); }
+.value.unset { color: var(--muted); }
+
+.live { font-size: 12px; color: var(--muted); }
+.live.on { color: var(--good); }
+
+.step {
+  flex-direction: row;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--panel);
+}
+.step-time { width: 46px; font-weight: 600; }
+.step-text { flex: 1; min-width: 0; color: var(--muted); }
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.act {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+  font-size: 14px;
+}
+.act:hover { background: var(--panel-hover); }
+.act:active { background: var(--hairline); }
+.act:disabled { color: var(--muted); background: var(--bg); }
+
+.act.primary { background: var(--accent); border: 1px solid var(--accent); }
+.act.primary:hover { background: var(--accent-hover); }
+.act.primary:active { background: var(--accent-down); }
+
+.act.wide { grid-column: 1 / 3; }
+.act-label { flex: 1; min-width: 0; }
+
+/* ---- status ---------------------------------------------------------------------------------------------- */
+
+.status {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  border-top: 1px solid var(--hairline);
+}
+.status.ok { color: var(--good); }
+.status.bad { color: var(--bad); }
+
+/* ---- landscape: details left, buttons in a column on the right ------------------------------------------- */
+
+@media (orientation: landscape) {
+  .bar { height: 48px; }
+  .npc { flex-direction: row; }
+  .npc .scroll { flex: 1; }
+  .actions {
+    width: 300px;
+    grid-template-columns: 1fr;
+    border-top: 0;
+    border-left: 1px solid var(--hairline);
+    overflow-y: auto;
+  }
+  .act { height: 40px; }
+  .act.wide { grid-column: 1 / 2; }
+}

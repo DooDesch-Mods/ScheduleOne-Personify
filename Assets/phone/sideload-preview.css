@@ -1,0 +1,127 @@
+/* The Sideload renderer's own defaults, restated for a browser.
+   Generated numbers are checked against the engine by Workspace/Tests/Sideload.Tests/PreviewShellTests.cs.
+
+   Put `data-sideload` on whatever element holds the app - `#viewport` in a desktop preview shell, `<body>` on a
+   page served to a phone - and everything below applies inside it. One file, both hosts.
+
+   Every rule is wrapped in :where() so it carries ZERO specificity. That part is load-bearing: written plainly,
+   `[data-sideload] *` would outrank every class selector in an app's stylesheet and the app's own
+   `flex-direction: row` would never win. */
+
+
+/* --- the box model ------------------------------------------------------------------------------------------ */
+
+/* In this engine EVERY element is a flex container, the default direction is column, and border-box is always in
+   force (Sideload/Css/ComputedStyle.cs). None of those three is true in CSS, and without them the browser lays out
+   every box on the page differently from the game.
+
+   `position: relative` is here because an absolutely positioned child in the engine is placed against its DIRECT
+   parent's padding box, always - every box is a containing block there, whether or not it says `position`
+   (FlexLayout.cs:142 and :261). A browser walks up to the nearest positioned ancestor instead, so without this an
+   overlay pinned to a card lands on whatever container happens to be positioned. Declaring it costs nothing else:
+   a relative box with no insets sits exactly where it would have sat, in the browser and in the engine alike. */
+:where([data-sideload], [data-sideload] *) {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  min-height: 0;
+
+  /* The engine's automatic minimum in a COLUMN is the item's own content height, and when a box declares a height
+     that declared height IS the floor (FlexLayout.cs AutomaticMinimum). So a list of 92px rows stays 92px and
+     scrolls. A browser floors at min-content instead and squeezed the same list into twenty overlapping lines.
+     Zero shrink restores the engine's rule; an app that genuinely wants an item to give way says `flex-shrink` or
+     `flex: 1` itself and beats this at any specificity.
+
+     In a ROW the engine floors at zero, which is the opposite of a browser - there the preview will show an
+     overflow the game squeezes away instead. Overflowing visibly is the better half of that trade. */
+  flex-shrink: 0;
+
+  /* `align-content` is not implemented; wrapped lines pack from the cross start (FlexLayout.cs:14). */
+  align-content: flex-start;
+}
+
+/* A scroll container is the one box the engine DOES shrink below its content, precisely because it can scroll
+   (AutomaticMinimum returns zero for it). Give it back what the rule above took away, or the one box meant to
+   soak up the overflow is the one box that cannot.
+
+   CSS cannot ask "does this element have overflow set", only whether it says so inline - hence the class names,
+   which are the ones the shipped bundles already use. A page with its own name for a scroll box adds it here or
+   writes `flex-shrink: 1` on it directly. */
+:where([data-sideload] [style*="overflow"],
+       [data-sideload] .scroll, [data-sideload] .rows, [data-sideload] .messages, [data-sideload] .list) {
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+
+/* --- runs of text ------------------------------------------------------------------------------------------- */
+
+/* The engine folds an element that holds text of its own plus inline children into ONE TextMeshPro string, with
+   each child's colour as a tag (Dom/DomBuilder.cs CompileInline). So `Price: <span>$12</span>` is one line. In a
+   browser the flex default above would make the span its own item and stack the price under the sentence; marking
+   it inline puts it back in the same anonymous flex item as the text beside it, which is one line again.
+
+   The limit, and it is worth knowing: the engine only folds when the element has DIRECT TEXT of its own. A bar
+   holding nothing but two spans has two flex items and stacks them in a column - here they stay on one line.
+   There is no selector for "my parent has a text node", so the preview's own checker names those elements at
+   runtime instead. */
+:where([data-sideload] span, [data-sideload] b, [data-sideload] strong, [data-sideload] i, [data-sideload] em,
+       [data-sideload] u, [data-sideload] small, [data-sideload] code, [data-sideload] a) {
+  display: inline;
+}
+
+
+/* --- controls ----------------------------------------------------------------------------------------------- */
+
+/* `display: flex` is restated here and that is the whole point of the rule. This block carries the same zero
+   specificity as the box-model rule and sits after it, so a `display: block` in this position quietly takes every
+   button, input and select back out of flex layout - in the browser only. The engine makes no exception for a
+   control, so a button laid out as a row was a row in the game and a stack of blocks in the preview: captions
+   centred instead of left, trailing icons dropped below the field they belong in. */
+:where([data-sideload] input, [data-sideload] button, [data-sideload] textarea, [data-sideload] select) {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  outline: none;
+  display: flex;
+}
+
+:where([data-sideload] button) { cursor: pointer; }
+
+/* The engine draws an image as its own box and never scales it down to its container. */
+:where([data-sideload] img) { display: block; max-width: none; }
+
+
+/* --- the inherited initial values ---------------------------------------------------------------------------- */
+
+/* From Sideload/Css/ComputedStyle.cs, set once on the root and inherited from there. Never restated per element: a
+   `:where([data-sideload] *)` rule would look harmless and would in fact break inheritance, resetting every child
+   whose parent had chosen something else.
+
+   A browser's own defaults are 16px, `normal` line-height and black text. All three are visibly wrong here - a
+   page written against a 15px base comes out about 7% larger in the preview, and dark-on-dark text is unreadable. */
+:where([data-sideload]) {
+  font-size: 15px;      /* ComputedStyle.FontSize */
+  line-height: 1.2;     /* ResolvedLineHeight, when line-height is unset */
+  color: #ECEDF1;       /* ComputedStyle.Color */
+  font-weight: 400;     /* ComputedStyle.FontWeight */
+  text-align: left;     /* ComputedStyle.TextAlign */
+
+  /* `game-ui` is the family name the bundles ask for. In the game it resolves to the Open Sans cuts the phone
+     itself uses (Sideload/Paint/TextSupport.cs). Standing in with whatever the device has is not close enough:
+     Segoe UI at the same size runs about a sixth wider, which moves every wrap and every measured position. */
+  font-family: game-ui, "Open Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars stay hidden so the preview and the game still look alike - the engine draws none. */
+:where([data-sideload] *) { scrollbar-width: none; }
+:where([data-sideload]) ::-webkit-scrollbar { width: 0; height: 0; }

@@ -1,12 +1,14 @@
 {
   "name": "Personify",
-  "version_number": "1.2.2",
+  "version_number": "2.1.1",
   "website_url": "https://github.com/DooDesch-Mods/ScheduleOne-Personify",
-  "description": "In-game NPC editor: design body, face, hair, clothing and tattoos live on the menu character, then export a ready-to-publish Personnel NPC pack.",
+  "description": "In-game NPC editor: build NPCs with a live 3D preview, test them next to you in your save, and publish a ready-to-upload Personnel NPC pack.",
   "dependencies": [
     "LavaGang-MelonLoader-0.7.3",
     "ifBars-S1API_Forked-3.2.1",
-    "DooDesch-SideHustle-1.0.0"
+    "DooDesch-SideHustle-3.2.1",
+    "DooDesch-Sideload-1.36.0",
+    "DooDesch-Personnel-2.4.4"
   ],
   "contributors": [ "DooDesch" ]
 }

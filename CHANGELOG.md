@@ -3,6 +3,82 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.3] - 2026-10-31
+
+### Changed
+
+- Needs Personnel 2.4.4, the first version MLVScan 2.1.7 does not disable.
+
+### Fixed
+
+- Very tall NPCs keep their head on the card: anyone taller than the chart is drawn smaller to fit.
+
+## [2.1.2] - 2026-10-31
+
+### Fixed
+
+- Cards converted from another mod now show their original author in the vault list.
+
+## [2.1.1] - 2026-10-31
+
+### Fixed
+
+- Making a card right after opening a project no longer hangs while contact pictures are still drawing.
+- Cards and contact pictures show big, tiny and missing heads. Hair no longer goes wrong on the NPCs after them.
+- Custom body pictures stay in their list position in the editor and on cards. They no longer vanish under underwear
+  or clothing.
+
+### Changed
+
+- Needs Personnel 2.4.2. Update it along with the mod.
+
+## [2.1.0] - 2026-10-29
+
+### Added
+
+- Share NPCs as cards: "Create card" in the NPC header saves the NPC as an image.
+- NPC Vault tab on the start page: browse personify.doomods.com, install a card or publish your own.
+- Remix a card into a new project. The card keeps the credit of the original author.
+
+### Changed
+
+- Needs Personnel 2.4.0. Update it along with the mod.
+
+## [2.0.1] - 2026-10-29
+
+### Fixed
+
+- New NPCs appear in the world. Before, only copies of older NPCs did.
+
+## [2.0.0] - 2026-10-29
+
+### Added
+
+- New editor: four areas (Look, Role, Routine, Relations), a live 3D preview, undo and redo, and edit
+  several NPCs at once.
+- Test puts you in a save of your choice, right next to your NPC.
+- Phone app: set an NPC's start point and route steps where you stand, and see a look on the live NPC.
+- NPCs can be civilians, customers, dealers or suppliers. Customers unlock through the contacts you pick.
+- Installed packs: switch them on or off, or remove them, from the editor's start page.
+
+### Changed
+
+- Your work lives in projects: saved as you go, with a history to step back to. Import turns a pack into a project.
+- Publish builds a Thunderstore-ready zip under `UserData/Personify/Exports`.
+- Needs Sideload 1.36.0 and Personnel 2.3.0. Update both along with the mod.
+
+### Removed
+
+- Custom PNG layers from `UserData/Personify/Import`. Tattoos come from the game or from Inkorporated packs, made with Inkubator.
+
+## [1.5.0] - 2026-10-28
+
+### Added
+
+- Customers can start locked: set Unlock to "With a sample" and pick their contacts. Once you know a contact,
+  a free sample opens them, like vanilla customers.
+- The contact picker lists every NPC in town by area. Load a save once after updating so the list fills.
+
 ## [1.4.0] - 2026-10-15
 
 ### Added

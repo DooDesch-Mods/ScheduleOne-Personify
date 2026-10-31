@@ -3,6 +3,12 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] - 2026-10-31
+
+### Fixed
+
+- Cards converted from another mod now show their original author in the vault list.
+
 ## [2.1.1] - 2026-10-31
 
 ### Fixed

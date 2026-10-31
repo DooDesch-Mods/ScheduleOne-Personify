@@ -65,7 +65,7 @@
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
 | Side Hustle | [DooDesch-SideHustle](https://thunderstore.io/c/schedule-i/p/DooDesch/SideHustle/) `3.2.1+` - the hub the editor opens from |
 | Sideload | [DooDesch-Sideload](https://thunderstore.io/c/schedule-i/p/DooDesch/Sideload/) `1.36.0+` - draws the editor and the phone app |
-| Personnel | [DooDesch-Personnel](https://thunderstore.io/c/schedule-i/p/DooDesch/Personnel/) `2.4.0+` - runs your NPCs in the game |
+| Personnel | [DooDesch-Personnel](https://thunderstore.io/c/schedule-i/p/DooDesch/Personnel/) `2.4.2+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation

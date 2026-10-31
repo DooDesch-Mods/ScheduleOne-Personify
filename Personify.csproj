@@ -104,6 +104,10 @@
     <EmbeddedResource Include="Assets/editor/icons/*.png">
       <LogicalName>Personify.Assets.editor.icons.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
+    <!-- The package icon, drawn on Personify's tile in the Side Hustle hub (GamemodeDescriptor.IconResource). -->
+    <EmbeddedResource Include="thunderstore/icon.png">
+      <LogicalName>Personify.hub-icon.png</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <!-- Glyph atlases for the card picture (tools/card-font.py); Cards/CardArt.cs loads them by these names. -->
   <ItemGroup>

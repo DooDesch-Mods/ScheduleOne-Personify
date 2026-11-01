@@ -11,7 +11,7 @@
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.4.4+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.4.6+-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_47cKhE8X7opo8dmiMoUnmSS4/badge.svg)](https://mlvscan.com/attestations/att_47cKhE8X7opo8dmiMoUnmSS4)
@@ -41,7 +41,7 @@
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.
-- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.4.4+ (pulled in as dependencies).
+- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.4.6+ (pulled in as dependencies).
 - Optional: **Inkorporated** (tattoo packs in the editor).
 
 ## Usage
@@ -57,3 +57,7 @@ Full guide on [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-Personify).
 ## License
 
 MIT. See the included LICENSE.md.
+
+This mod is written with help from generative AI tools (Anthropic Claude, OpenAI Codex).
+
+If you have fun with it, a like on the [Thunderstore page](https://thunderstore.io/c/schedule-i/p/DooDesch/Personify/) really helps other people find it (thumbs up next to Download, you need to be logged in) - ty either way, and lemme know if anything breaks or you've got ideas

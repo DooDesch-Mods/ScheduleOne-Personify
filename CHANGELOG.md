@@ -3,6 +3,20 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.1.4] - 2026-11-01
+
+### Changed
+
+- Needs Personnel 2.4.6, which skips schedule steps into buildings no NPC can enter.
+- The Side Hustle hub shows the Personify icon.
+- Building markers sit at a door NPCs can use. This moves the markers of the Chinese Restaurant, North Warehouse,
+  Sauerkraut Supreme and Shooting Range.
+
+### Fixed
+
+- Buildings no NPC can enter, like the Pawn Shop, are no longer offered for schedules. An existing step into one
+  shows a warning.
+
 ## [2.1.3] - 2026-10-31
 
 ### Changed

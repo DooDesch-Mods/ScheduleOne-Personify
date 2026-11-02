@@ -16,7 +16,7 @@ UI language is English or German.
 
 ## Product Purpose
 Personify is an NPC editor for Schedule I that runs inside the game. A player builds an NPC without code: look,
-role (civilian, customer, dealer, supplier), daily routine on the town map, and relations to other NPCs. Success:
+role (civilian, customer, dealer, supplier, police), daily routine on the town map, and relations to other NPCs. Success:
 the NPC stands in the player's town and behaves like a vanilla NPC.
 
 ## Positioning

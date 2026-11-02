@@ -247,6 +247,7 @@ namespace Personify.Host
         {
             if (npc["dealer"] is JObject) return "dealer";
             if (npc["supplier"] is JObject) return "supplier";
+            if (npc["police"] is JObject) return "police";
             if (npc["customer"] is JObject) return "customer";
             return "townsfolk";
         }

@@ -31,7 +31,7 @@
 - **Look.** Body, hair, face, eyes, clothing, accessories and tattoos, applied live to a 3D preview
   you can rotate and zoom. Random look, and an Expert view with the full face, body and accessory
   layer stacks.
-- **Role.** Civilian, customer, dealer or supplier. Customers get their profile, order days, taste,
+- **Role.** Civilian, customer, dealer, supplier or police. Customers get their profile, order days, taste,
   samples and addiction; dealers and suppliers get their own panels.
 - **Routine.** Click the town map to set where the NPC starts the day and where it goes: go inside,
   sit, hang out, or drive to a car park in its own car. The whole day shows on a 24 h strip.

@@ -22,7 +22,7 @@
 
 - **Look, Role, Routine, Relations** in one editor, with a live 3D preview, random look, undo and redo,
   and edits on several NPCs at once.
-- **Roles:** civilian, customer, dealer or supplier, each with its own settings.
+- **Roles:** civilian, customer, dealer, supplier or police, each with its own settings.
 - **Routine:** click the town map to set the start point and plan the day, including drives to a car
   park in the NPC's own car.
 - **Test:** pick a save; the game restarts into it and puts you right next to your NPC.

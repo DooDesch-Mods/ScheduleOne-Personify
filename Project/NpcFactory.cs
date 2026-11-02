@@ -7,12 +7,12 @@ namespace Personify.Project
 {
     /// <summary>
     /// New NPCs and role switches with values that play in the game right away: a customer gets a buying profile and
-    /// a connection, a dealer a home, a supplier something to sell. Defaults are the vanilla ones where the game has
+    /// a connection, a dealer a home, a supplier something to sell, an officer a place at the police station. Defaults are the vanilla ones where the game has
     /// them (DealerNPCData: cut 0.2, signing fee 500; CustomerData: spending 200-500, 1-5 orders a week).
     /// </summary>
     public static class NpcFactory
     {
-        public static readonly string[] Roles = { "civilian", "customer", "dealer", "supplier" };
+        public static readonly string[] Roles = { "civilian", "customer", "dealer", "supplier", "police" };
 
         /// <summary>Hints from the loaded save that make defaults fit the town; any field may be null.</summary>
         public sealed class Hints
@@ -57,7 +57,7 @@ namespace Personify.Project
                 ProjectLog.Warn($"[edit] unknown role '{role}' for '{(string)n["id"]}' - civilian used.");
                 role = "civilian";
             }
-            foreach (string r in new[] { "customer", "dealer", "supplier" })
+            foreach (string r in new[] { "customer", "dealer", "supplier", "police" })
                 if (r != role) n.Remove(r);
             if (n["behavior"] is JObject b)
             {
@@ -103,6 +103,9 @@ namespace Personify.Project
                             ["maxOrderLimit"] = 500,
                         };
                     if (n["spawn"] is JObject s && (bool?)s["physical"] == false) s["physical"] = true;
+                    break;
+                case "police":
+                    if (!(n["police"] is JObject)) n["police"] = new JObject();
                     break;
             }
         }

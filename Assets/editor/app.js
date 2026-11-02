@@ -138,17 +138,18 @@ const ui = {
 };
 
 const AREAS = [['look', T('Look')], ['role', T('Role')], ['routine', T('Routine')], ['relations', T('Relations')]];
-const ROLES = [['civilian', T('Civilian')], ['customer', T('Customer')], ['dealer', T('Dealer')], ['supplier', T('Supplier')]];
+const ROLES = [['civilian', T('Civilian')], ['customer', T('Customer')], ['dealer', T('Dealer')], ['supplier', T('Supplier')], ['police', T('Police')]];
 const ROLE_SUB = {
   civilian: T('Lives in the town and has no trade.'),
   customer: T('Buys your product.'),
   dealer: T('Sells your product for a cut.'),
   supplier: T('Sells you ingredients and seeds.'),
+  police: T('One more officer at the police station.'),
 };
 
 const npcs = () => (st.project && st.project.npcs) || [];
 const npcById = id => npcs().find(n => n.id === id) || null;
-const roleOf = n => (!n ? 'civilian' : n.dealer ? 'dealer' : n.supplier ? 'supplier' : n.customer ? 'customer' : 'civilian');
+const roleOf = n => (!n ? 'civilian' : n.dealer ? 'dealer' : n.supplier ? 'supplier' : n.police ? 'police' : n.customer ? 'customer' : 'civilian');
 const roleLabel = r => t((ROLES.find(x => x[0] === r) || ROLES[0])[1]);
 const multi = () => st.selection.length > 1;
 const targets = () => (multi() ? st.selection.slice() : st.active ? [st.active] : []);
@@ -915,7 +916,7 @@ function importDialog() {
 
 // Card pictures are 900 x 1260; tiles keep that shape.
 const CARD_W = 196, CARD_H = 274;
-const ROLE_NAMES = { customer: T('Customer'), dealer: T('Dealer'), supplier: T('Supplier'), townsfolk: T('Townsfolk') };
+const ROLE_NAMES = { customer: T('Customer'), dealer: T('Dealer'), supplier: T('Supplier'), police: T('Police'), townsfolk: T('Townsfolk') };
 const VAULT_SORTS = [['new', T('New')], ['hearts', T('Hearts')], ['downloads', T('Downloads')]];
 Object.assign(ERRORS, {
   card_busy: T('A card is already being made.'),

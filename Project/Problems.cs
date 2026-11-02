@@ -110,11 +110,12 @@ namespace Personify.Project
             }
         }
 
-        /// <summary>Role the way Personnel resolves it: dealer, then supplier, then customer, then behavior.conversation.</summary>
+        /// <summary>Role the way Personnel resolves it: dealer, then supplier, then police, then customer, then behavior.conversation.</summary>
         public static string Role(JObject n)
         {
             if (n["dealer"] is JObject) return "dealer";
             if (n["supplier"] is JObject) return "supplier";
+            if (n["police"] is JObject) return "police";
             if (n["customer"] is JObject) return "customer";
             string conv = (string)n["behavior"]?["conversation"];
             if (string.Equals(conv, "customer", StringComparison.OrdinalIgnoreCase)) return "customer";
@@ -124,7 +125,7 @@ namespace Personify.Project
 
         private static void CheckRole(List<Problem> list, JObject n, int i)
         {
-            int blocks = (n["dealer"] is JObject ? 1 : 0) + (n["supplier"] is JObject ? 1 : 0) + (n["customer"] is JObject ? 1 : 0);
+            int blocks = (n["dealer"] is JObject ? 1 : 0) + (n["supplier"] is JObject ? 1 : 0) + (n["police"] is JObject ? 1 : 0) + (n["customer"] is JObject ? 1 : 0);
             string role = Role(n);
             if (blocks > 1) Add(list, "warning", "roles_conflict", i, "role", null, role, $"The NPC has more than one role block; it plays {role}.");
 
@@ -138,6 +139,9 @@ namespace Personify.Project
                 if ((bool?)n["spawn"]?["physical"] == false)
                     Add(list, "warning", "supplier_not_physical", i, "routine", "spawn.physical", null, "A supplier always stands in the world; 'phone contact only' is ignored.");
             }
+
+            if (role == "police" && n["schedule"] is JArray steps && steps.Count > 0)
+                Add(list, "warning", "police_schedule", i, "routine", "schedule", null, "An officer takes its duties from the police station; the routine is ignored.");
         }
 
         // Personnel skips such a step at runtime; a step that names its own door walks to that door and works.

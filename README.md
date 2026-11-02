@@ -13,7 +13,7 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.4.6+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_6zyuBO7KO2zsreWQbvqAR-gB/badge.svg)](https://mlvscan.com/attestations/att_6zyuBO7KO2zsreWQbvqAR-gB)
@@ -31,7 +31,7 @@
 - **Look.** Body, hair, face, eyes, clothing, accessories and tattoos, applied live to a 3D preview
   you can rotate and zoom. Random look, and an Expert view with the full face, body and accessory
   layer stacks.
-- **Role.** Civilian, customer, dealer or supplier. Customers get their profile, order days, taste,
+- **Role.** Civilian, customer, dealer, supplier or police. Customers get their profile, order days, taste,
   samples and addiction; dealers and suppliers get their own panels.
 - **Routine.** Click the town map to set where the NPC starts the day and where it goes: go inside,
   sit, hang out, or drive to a car park in its own car. The whole day shows on a 24 h strip.
@@ -65,7 +65,7 @@
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
 | Side Hustle | [DooDesch-SideHustle](https://thunderstore.io/c/schedule-i/p/DooDesch/SideHustle/) `3.2.1+` - the hub the editor opens from |
 | Sideload | [DooDesch-Sideload](https://thunderstore.io/c/schedule-i/p/DooDesch/Sideload/) `1.36.0+` - draws the editor and the phone app |
-| Personnel | [DooDesch-Personnel](https://thunderstore.io/c/schedule-i/p/DooDesch/Personnel/) `2.4.6+` - runs your NPCs in the game |
+| Personnel | [DooDesch-Personnel](https://thunderstore.io/c/schedule-i/p/DooDesch/Personnel/) `2.5.0+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation

@@ -49,6 +49,7 @@ namespace Personify.Cards
         {
             "dealer" => "#d0503f",
             "supplier" => "#5fa86f",
+            "police" => "#8f7fd6",
             "customer" => "#5b8fc7",
             _ => "#b8a98a",
         };

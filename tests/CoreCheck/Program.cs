@@ -178,6 +178,19 @@ try
     Check("new supplier sells something", ep.FindNpc("edit_pack_sully")["supplier"]?["items"]?[0] != null);
     Check("new NPCs raise no error", Problems.ErrorCount(Problems.Check(ep)) == 0, string.Join("; ", Problems.Check(ep).ConvertAll(x => x.code)));
 
+    // 6a. Police role: the block exists, reads as the role, and a routine on it warns.
+    var policePack = ProjectFiles.Create("Police Pack", "");
+    policePack.Npcs.Add(NpcFactory.Create(policePack, "Testy", "police", null, null));
+    var policeNpc = policePack.FindNpc("police_pack_testy");
+    Check("new officer has a police block", policeNpc["police"] != null && policeNpc["customer"] == null);
+    Check("a police block reads as the police role", Problems.Role(policeNpc) == "police", Problems.Role(policeNpc));
+    Check("a new officer raises no error", Problems.ErrorCount(Problems.Check(policePack)) == 0, string.Join("; ", Problems.Check(policePack).ConvertAll(x => x.code)));
+    var dutyNpc = (JObject)policeNpc.DeepClone();
+    dutyNpc["schedule"] = JArray.Parse("[{\"type\":\"walk\",\"start\":\"08:00\"}]");
+    policePack.Npcs.Clear();
+    policePack.Npcs.Add(dutyNpc);
+    Check("a routine on an officer warns", Problems.Check(policePack).Exists(x => x.code == "police_schedule"), string.Join("; ", Problems.Check(policePack).ConvertAll(x => x.code)));
+
     var es = new EditSession(ep);
     double t0 = 100;
     es.Set(new[] { "edit_pack_ana", "edit_pack_sully" }, "appearance.height", 1.1, t0);

@@ -213,7 +213,7 @@
   ];
 
   function addMany(p) {
-    const roles = ['civilian', 'customer', 'dealer', 'supplier'];
+    const roles = ['civilian', 'customer', 'dealer', 'supplier', 'police'];
     for (let i = 0; i < 100; i++) {
       const n = clone(p.npcs[i % 5]);
       n.id = 'extra_' + i;
@@ -393,12 +393,12 @@
       return state({ added: n.id });
     },
     'npc.setRole': a => {
-      if (['civilian', 'customer', 'dealer', 'supplier'].indexOf(a.role) < 0) return fail('role_unknown');
+      if (['civilian', 'customer', 'dealer', 'supplier', 'police'].indexOf(a.role) < 0) return fail('role_unknown');
       snapshot();
       for (const id of a.ids) {
         const n = project.npcs.find(x => x.id === id);
         if (!n) continue;
-        for (const r of ['customer', 'dealer', 'supplier']) if (r !== a.role) delete n[r];
+        for (const r of ['customer', 'dealer', 'supplier', 'police']) if (r !== a.role) delete n[r];
         if (a.role !== 'civilian' && !n[a.role]) n[a.role] = roleDefaults(a.role);
         if (!n.behavior) n.behavior = {};
         n.behavior.conversation = a.role === 'customer' ? 'customer' : a.role === 'dealer' ? 'dealer' : 'none';

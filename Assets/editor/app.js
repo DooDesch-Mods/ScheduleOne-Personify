@@ -2784,6 +2784,7 @@ const PHONE_KEYS = {
     ['supplier_request_repayment', T('Asks for the debt'), '<DEBT>'], ['supplier_unlocked', T('Unlocked'), ''],
     ['supplier_meet_confirm', T('Confirms a meeting'), '<LOCATION>'],
   ],
+  police: [],
   civilian: [],
 };
 const REACTIONS = [['annoyed', T('Annoyed')], ['hurt', T('Hurt')], ['panic_start', T('Panics')], ['noticed_pickpocket', T('Notices a pickpocket')]];

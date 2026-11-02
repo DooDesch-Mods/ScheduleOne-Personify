@@ -3,6 +3,17 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-11-02
+
+### Added
+
+- New role: Police. The NPC joins the station as one more officer and keeps its look.
+- A schedule on a police NPC shows a warning, because officers follow the station instead.
+
+### Changed
+
+- Needs Personnel 2.5.0.
+
 ## [2.1.4] - 2026-11-01
 
 ### Changed

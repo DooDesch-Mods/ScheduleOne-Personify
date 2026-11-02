@@ -11,7 +11,7 @@
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.4.6+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
 [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_6zyuBO7KO2zsreWQbvqAR-gB/badge.svg)](https://mlvscan.com/attestations/att_6zyuBO7KO2zsreWQbvqAR-gB)
@@ -41,7 +41,7 @@
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.
-- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.4.6+ (pulled in as dependencies).
+- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.5.0+ (pulled in as dependencies).
 - Optional: **Inkorporated** (tattoo packs in the editor).
 
 ## Usage

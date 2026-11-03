@@ -4,7 +4,8 @@
 
 .DESCRIPTION
   Two boots into the main menu of a test slot, both with this checkout's build:
-    with    - Side Hustle in the slot: the gamemode registers with the hub.
+    with    - Side Hustle in the slot: the gamemode registers with the hub, launches into the editor and the
+              editor's exit call returns to the hub.
     without - SideHustle.dll removed from the slot: Personify still loads, registers its phone app and logs that
               the hub entry is missing, and no FileNotFoundException for SideHustle is thrown.
   The game is stopped at the end. Run from anywhere:
@@ -21,6 +22,7 @@ $repo = (Resolve-Path "$PSScriptRoot\..").Path
 $root = (Resolve-Path "$repo\..").Path
 $checkout = Split-Path -Leaf $repo
 $session = Join-Path $root 'Workspace\tools\session\session.ps1'
+$s1 = Join-Path $root 'Workspace\tools\bridge\s1.py'
 $slotRoot = [string]((& python (Join-Path $root 'Workspace\tools\slots\slots.py') table | ConvertFrom-Json).$Slot.root)
 if (-not $slotRoot) { throw "slots.py table names no root for $Slot" }
 $log = Join-Path $slotRoot 'MelonLoader\Latest.log'
@@ -69,6 +71,16 @@ try {
     Check 'with: gamemode registered' (Has $lines '\[Personify\] Personify .* registered with Side Hustle\.') 'log line "registered with Side Hustle."'
     Check 'with: phone app registered' (Has $lines $phoneLine) 'log line "[phone] app registered"'
     Check 'with: no missing-assembly error' (-not (Has $lines ([regex]::Escape($missingAsm)))) $missingAsm
+
+    # Hub launch and the editor's own "Back to Side Hustle" call, which goes through EditorHost's ReturnToHub delegate.
+    $out = @(& python $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+    Check 'with: hub launch opens the editor' (Has $out '\[Personify\] \[editor\] editor page mounted\.') 'shstart doodesch.personify'
+    $answer = (& python $s1 --slot $Slot eval personify-editor "JSON.stringify(call('editor.exit'))" 2>&1 | Out-String).Trim()
+    Check 'with: editor.exit answered ok' ($answer -match '"ok":\s*true') $answer
+    $out = @(& python $s1 --slot $Slot run shapi 2>&1 | ForEach-Object { "$_" })
+    Check 'with: session ended after editor.exit' (Has $out 'session none') ([string]($out | Select-Object -First 1))
+    $lines = @(Get-Content $log)
+    Check 'with: no ReturnToHub failure' (-not (Has $lines 'returning to the Side Hustle hub failed|ReturnToHub failed')) 'log'
 
     # ---- without Side Hustle ---------------------------------------------------------------------------------
     StopSlotGame

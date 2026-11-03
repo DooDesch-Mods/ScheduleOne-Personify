@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Personify.Editor;
 using Personify.Project;
-using SideHustle;
 using Sideload.Api;
 using UnityEngine;
 
@@ -26,7 +25,8 @@ namespace Personify.Host
 
         private static GameObject _root;
         private static SurfaceHandle _surface;
-        private static LaunchContext _ctx;
+        // Side Hustle's ReturnToHub, kept as a plain delegate so this class names no Side Hustle type (see SideHustleLink).
+        private static Action _returnToHub;
         private static EditSession _session;
         private static string _previewId;
         private static bool _previewDirty;
@@ -41,9 +41,9 @@ namespace Personify.Host
         internal static bool IsOpen => _root != null;
         internal static PackProject Project => _session?.Project;
 
-        internal static void Open(LaunchContext ctx)
+        internal static void Open(Action returnToHub)
         {
-            _ctx = ctx;
+            _returnToHub = returnToHub;
             if (!Surfaces.Available)
             {
                 Core.Log.Error("Sideload 1.36 or newer is needed for the editor - it was not found. Install or update Sideload.");
@@ -89,9 +89,9 @@ namespace Personify.Host
 
         internal static void ExitToHub()
         {
-            if (_ctx != null)
+            if (_returnToHub != null)
             {
-                try { _ctx.ReturnToHub(); return; }
+                try { _returnToHub(); return; }
                 catch (Exception e) { Core.Log.Warning("[editor] returning to the Side Hustle hub failed: " + e.Message); }
             }
             Close();

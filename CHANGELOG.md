@@ -3,6 +3,13 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.1] - 2026-11-03
+
+### Fixed
+
+- Personify loads without Side Hustle installed. The phone app works; the editor still opens only from the Side
+  Hustle hub.
+
 ## [2.2.0] - 2026-11-02
 
 ### Added

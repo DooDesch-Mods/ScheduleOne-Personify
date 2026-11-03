@@ -1,5 +1,6 @@
+using System;
+using System.Linq;
 using MelonLoader;
-using SideHustle;
 using UnityEngine;
 
 [assembly: MelonInfo(typeof(Personify.Core), "Personify", DooDesch.ModVersion.Current, "DooDesch", "https://github.com/DooDesch-Mods/ScheduleOne-Personify")]
@@ -12,6 +13,7 @@ namespace Personify
     /// MelonLoader entry point for Personify. Registers itself as a singleplayer, menu-space gamemode with Side
     /// Hustle. Launching it (from the main-menu hub) opens the NPC editor overlay on top of the live menu rig - no
     /// save is loaded. The editor lets the player design an NPC's appearance live and export a Personnel NPC pack.
+    /// This class names no Side Hustle type, so it loads without SideHustle.dll; see Host.SideHustleLink.
     /// </summary>
     public sealed class Core : MelonMod
     {
@@ -29,47 +31,23 @@ namespace Personify
             Host.Localization.Register();
             App.PhoneApp.Register();
 
+            if (!SideHustleLoaded())
+            {
+                Log.Warning("Side Hustle is not installed: the Personify editor is not in the main-menu hub. Install Side Hustle to open it.");
+                return;
+            }
             try
             {
-                var desc = new GamemodeDescriptor
-                {
-                    Id = "doodesch.personify",
-                    DisplayName = "Personify",
-                    Description = "Design and export custom NPC packs.",
-                    Author = "DooDesch",
-                    Support = GamemodeSupport.Singleplayer,
-                    Surface = GamemodeSurface.MenuSpace,
-                    OnLaunchSingleplayer = OnLaunch,
-                    OnExitToHub = OnExit
-                };
-                AddHubIcon(desc);
-                API.Register(desc);
-                Log.Msg($"Personify {Info.Version} registered with Side Hustle.");
+                Host.SideHustleLink.Register(Info.Version);
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
-                Log.Warning("Side Hustle not available, Personify cannot register: " + e.Message);
+                Log.Warning("Side Hustle not available, Personify cannot register: " + e.GetType().Name + ": " + e.Message);
             }
         }
 
-        private const string HubIconResource = "Personify.hub-icon.png";
-
-        // GamemodeDescriptor.IconResource exists since Side Hustle 2.5.0 and Personify supports older versions, so the
-        // field is set by name: an older Side Hustle registers Personify without an icon.
-        private static void AddHubIcon(GamemodeDescriptor desc)
-        {
-            try
-            {
-                var field = typeof(GamemodeDescriptor).GetField("IconResource");
-                if (field == null) { Log.Warning("Side Hustle is older than 2.5.0; Personify shows no icon in the hub."); return; }
-                field.SetValue(desc, HubIconResource);
-            }
-            catch (System.Exception e) { Log.Warning("Personify could not give the hub its icon: " + e.Message); }
-        }
-
-        private static void OnLaunch(LaunchContext ctx) => Host.EditorHost.Open(ctx);
-
-        private static void OnExit(LaunchContext ctx) => Host.EditorHost.Close();
+        private static bool SideHustleLoaded() =>
+            AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "SideHustle");
 
         // The World tab's map comes out of a loaded save; see Editor.World.WorldCapture.
         public override void OnSceneWasInitialized(int buildIndex, string sceneName)

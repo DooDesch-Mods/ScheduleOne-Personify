@@ -4,6 +4,8 @@
 
 **Download:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2276) · [Thunderstore](https://thunderstore.io/c/schedule-i/p/DooDesch/Personify/) · [GitHub Releases](https://github.com/DooDesch-Mods/ScheduleOne-Personify/releases)
 
+[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de)
+
 > Build your own NPCs inside the game - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload
 > [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
@@ -111,6 +113,12 @@ Tips:
 
 No settings. Projects are stored under `UserData/Personify/Projects/`, exports under
 `UserData/Personify/Exports/`. Projects from 1.x open as they are.
+
+## Community
+
+[![DooDesch Mods on Discord](https://mods.doodesch.de/img/card.svg)](https://mods.doodesch.de)
+
+Join the DooDesch Mods Discord: update pings, polls on what comes next, and playtests of new mods.
 
 ## Credits
 

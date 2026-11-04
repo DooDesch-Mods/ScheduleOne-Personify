@@ -2,8 +2,6 @@
 
 > 🛟 **Need help or found a bug?** Get support at [support.doodesch.de/personify](https://support.doodesch.de/personify).
 
-[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de)
-
 > **Build your own NPCs inside the game** - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload **Personnel** NPC pack.
 > Opens from the **Side Hustle** hub on the main menu.
@@ -14,7 +12,7 @@
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
 ![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
-[![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
+[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de) [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j/badge.svg)](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j)
 

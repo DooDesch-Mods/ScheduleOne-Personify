@@ -2,10 +2,12 @@
 
 > 🛟 **Need help or found a bug?** Get support at [support.doodesch.de/personify](https://support.doodesch.de/personify).
 
+**Download:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2276) · [Thunderstore](https://thunderstore.io/c/schedule-i/p/DooDesch/Personify/) · [GitHub Releases](https://github.com/DooDesch-Mods/ScheduleOne-Personify/releases)
+
 > Build your own NPCs inside the game - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload
-> [Personnel](https://github.com/DooDesch-Mods/ScheduleOne-Personnel) NPC pack. Opens from the
-> [Side Hustle](https://github.com/DooDesch-Mods/ScheduleOne-SideHustle) hub on the main menu.
+> [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
+> [Side Hustle](https://www.nexusmods.com/schedule1/mods/2232) hub on the main menu.
 
 ![Version](https://img.shields.io/badge/version-2.1.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
@@ -44,7 +46,7 @@
 - **Installed packs.** Switch a pack on or off, or remove it, from the start page.
 - **Publish.** Builds a Thunderstore-ready zip (manifest, README, LICENSE) under
   `UserData/Personify/Exports/`.
-- **Inkorporated tattoos.** If [Inkorporated](https://github.com/DooDesch-Mods/ScheduleOne-Inkorporated)
+- **Inkorporated tattoos.** If [Inkorporated](https://www.nexusmods.com/schedule1/mods/2214)
   is installed, its tattoo packs appear in the tattoo picker; the art is copied into your pack.
 
 ## Screenshots
@@ -63,15 +65,22 @@
 | Schedule I | IL2CPP (current Steam public build) |
 | MelonLoader | `0.7.3+` |
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
-| Side Hustle | [DooDesch-SideHustle](https://thunderstore.io/c/schedule-i/p/DooDesch/SideHustle/) `3.2.1+` - the hub the editor opens from |
-| Sideload | [DooDesch-Sideload](https://thunderstore.io/c/schedule-i/p/DooDesch/Sideload/) `1.36.0+` - draws the editor and the phone app |
-| Personnel | [DooDesch-Personnel](https://thunderstore.io/c/schedule-i/p/DooDesch/Personnel/) `2.5.0+` - runs your NPCs in the game |
+| Side Hustle | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2232) `3.2.1+` - the hub the editor opens from |
+| Sideload | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) `1.36.0+` - draws the editor and the phone app |
+| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.5.0+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation
 
-### Recommended: a Thunderstore mod manager
-Install with r2modman / Gale from the Schedule I community; the dependencies are pulled in
+### Recommended: Nexus Mods
+
+1. Install **MelonLoader 0.7.3** for Schedule I ([melonwiki.xyz](https://melonwiki.xyz/)).
+2. Download Personify from [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2276) and install it with Vortex,
+   or put **`Personify.dll`** into your Schedule I `Mods/` folder.
+3. Get the mods under Requirements from their Nexus pages the same way.
+
+### Thunderstore mod manager
+Install from the [Thunderstore page](https://thunderstore.io/c/schedule-i/p/DooDesch/Personify/) with r2modman / Gale; the dependencies are pulled in
 automatically.
 
 ### Manual
@@ -94,7 +103,7 @@ Tips:
 - Escape or right-click steps back one level. Ctrl+Z and Ctrl+Y undo and redo.
 - Select several NPCs in the list to change them together.
 - **History** in the project menu steps a project back to an earlier state.
-- Own tattoos come from [Inkubator](https://github.com/DooDesch-Mods/ScheduleOne-Inkubator): install its export as
+- Own tattoos come from [Inkubator](https://www.nexusmods.com/schedule1/mods/2233): install its export as
   an Inkorporated pack and the tattoos show up in the picker.
 - The NPC id (`packname_npcname`) is what other mods reference; renaming an NPC changes it.
 

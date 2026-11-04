@@ -2,6 +2,8 @@
 
 > 🛟 **Need help or found a bug?** Get support at [support.doodesch.de/personify](https://support.doodesch.de/personify).
 
+[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de)
+
 > **Build your own NPCs inside the game** - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload **Personnel** NPC pack.
 > Opens from the **Side Hustle** hub on the main menu.
@@ -53,6 +55,12 @@ next to the NPC, **Publish** writes the zip. Add a 256x256 `icon.png` before you
 Escape or right-click steps back one level. Ctrl+Z and Ctrl+Y undo and redo.
 
 Full guide on [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-Personify).
+
+## Community
+
+[![DooDesch Mods on Discord](https://mods.doodesch.de/img/card.svg)](https://mods.doodesch.de)
+
+Join the DooDesch Mods Discord: update pings, polls on what comes next, and playtests of new mods.
 
 ## License
 

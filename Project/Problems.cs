@@ -23,6 +23,53 @@ namespace Personify.Project
         public string arg;
         /// <summary>English sentence, for the log and as a fallback.</summary>
         public string text;
+        /// <summary>Index of the schedule step the problem is about, or -1.</summary>
+        public int step = -1;
+    }
+
+    /// <summary>
+    /// Seat sets and buildings of the captured world, for the checks that a schedule step points at something that
+    /// exists. The matching mirrors S1API, which Personnel's schedules run on: a seat set by full scene path or a path
+    /// suffix (case-insensitive), then by object name; a building by its BuildingName (case-insensitive).
+    /// </summary>
+    public sealed class WorldRefs
+    {
+        private readonly List<string> _seatPaths;
+        private readonly HashSet<string> _seatNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _buildings;
+
+        public WorldRefs(IEnumerable<string> seatPaths, IEnumerable<string> buildings)
+        {
+            _seatPaths = new List<string>();
+            foreach (var s in seatPaths ?? Array.Empty<string>())
+            {
+                if (string.IsNullOrEmpty(s)) continue;
+                _seatPaths.Add(s);
+                int cut = s.LastIndexOf('/');
+                _seatNames.Add(cut >= 0 ? s.Substring(cut + 1) : s);
+            }
+            _buildings = new HashSet<string>(buildings ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+        }
+
+        public bool HasSeats => _seatPaths.Count > 0;
+        public bool HasBuildings => _buildings.Count > 0;
+
+        /// <summary>The full scene path of the seat set a step's seatSetPath or seatSet names, or null.</summary>
+        public string FindSeat(string path, string name)
+        {
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                string p = path.Trim().Replace('\\', '/');
+                foreach (var full in _seatPaths) if (string.Equals(full, p, StringComparison.OrdinalIgnoreCase)) return full;
+                foreach (var full in _seatPaths) if (full.EndsWith(p, StringComparison.OrdinalIgnoreCase)) return full;
+            }
+            if (!string.IsNullOrWhiteSpace(name) && _seatNames.Contains(name.Trim()))
+                foreach (var full in _seatPaths)
+                    if (full.EndsWith("/" + name.Trim(), StringComparison.OrdinalIgnoreCase) || string.Equals(full, name.Trim(), StringComparison.OrdinalIgnoreCase)) return full;
+            return null;
+        }
+
+        public bool HasBuilding(string name) => !string.IsNullOrWhiteSpace(name) && _buildings.Contains(name.Trim());
     }
 
     /// <summary>One NPC the game knows, read from the NPC catalog Personnel writes on save load.</summary>
@@ -45,7 +92,8 @@ namespace Personify.Project
 
         /// <param name="catalog">NPCs of the last loaded save; null when no save was loaded yet (connection checks skipped).</param>
         /// <param name="doorless">Buildings without a door an NPC may use, from the captured world; null when no world was captured yet (door checks skipped).</param>
-        public static List<Problem> Check(PackProject p, IReadOnlyList<KnownNpc> catalog = null, ISet<string> doorless = null)
+        /// <param name="world">Seat sets and buildings of the captured world; null when no world was captured yet (seat and building checks skipped).</param>
+        public static List<Problem> Check(PackProject p, IReadOnlyList<KnownNpc> catalog = null, ISet<string> doorless = null, WorldRefs world = null)
         {
             var list = new List<Problem>();
             if (string.IsNullOrWhiteSpace(p.Name)) Add(list, "error", "pack_name_missing", -1, "pack", "name", null, "The pack needs a name.");
@@ -75,6 +123,7 @@ namespace Personify.Project
                 CheckRole(list, n, i);
                 CheckRelations(list, n, i, id, own, catalog == null ? null : known);
                 if (doorless != null) CheckDoors(list, n, i, doorless);
+                if (world != null) CheckRefs(list, n, i, world);
             }
             return list;
         }
@@ -160,6 +209,34 @@ namespace Personify.Project
             if (home != null && doorless.Contains(home))
                 Add(list, "warning", "building_no_door", i, "role", "dealer.home", home, "No NPC can enter the dealer's home.");
         }
+
+        // Personnel skips a sit or stay step whose seat set or building is not in the scene: the NPC stands where the
+        // previous step left it, and the Routine map has no point for the step.
+        private static void CheckRefs(List<Problem> list, JObject n, int i, WorldRefs world)
+        {
+            if (!(n["schedule"] is JArray schedule)) return;
+            for (int s = 0; s < schedule.Count; s++)
+            {
+                if (!(schedule[s] is JObject step)) continue;
+                string type = (string)step["type"];
+                if (world.HasSeats && string.Equals(type, "sit", StringComparison.OrdinalIgnoreCase))
+                {
+                    string path = (string)step["seatSetPath"], name = (string)step["seatSet"];
+                    if (string.IsNullOrWhiteSpace(path) && string.IsNullOrWhiteSpace(name)) continue;
+                    if (world.FindSeat(path, name) == null)
+                        AddStep(list, "warning", "seat_missing", i, s, string.IsNullOrWhiteSpace(path) ? name : path, "This seat is not in the game; the step is skipped.");
+                }
+                else if (world.HasBuildings && string.Equals(type, "stayInBuilding", StringComparison.OrdinalIgnoreCase))
+                {
+                    string building = (string)step["building"];
+                    if (!string.IsNullOrWhiteSpace(building) && !world.HasBuilding(building))
+                        AddStep(list, "warning", "building_missing", i, s, building, "This building is not in the game; the step is skipped.");
+                }
+            }
+        }
+
+        private static void AddStep(List<Problem> list, string severity, string code, int npc, int step, string arg, string text)
+            => list.Add(new Problem { severity = severity, code = code, npc = npc, area = "routine", field = "schedule", arg = arg, text = text, step = step });
 
         private static void CheckRelations(List<Problem> list, JObject n, int i, string id, HashSet<string> own, Dictionary<string, KnownNpc> known)
         {

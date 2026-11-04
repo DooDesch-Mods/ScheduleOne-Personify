@@ -41,6 +41,17 @@ namespace Personify.Host
             return w == null ? null : new HashSet<string>(w.Places.Where(p => p.Kind == "building" && p.NoDoor).Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
         }
 
+        /// <summary>Seat sets and buildings of the captured world for the problem list; null when no world was captured yet.
+        /// The buildings the capture leaves out on purpose still exist in the game, so they count as found.</summary>
+        internal static Personify.Project.WorldRefs Refs()
+        {
+            var w = WorldData.Current;
+            if (w == null) return null;
+            return new Personify.Project.WorldRefs(
+                w.Places.Where(p => p.Kind == "seat").Select(p => string.IsNullOrEmpty(p.Path) ? p.Name : p.Path),
+                w.Places.Where(p => p.Kind == "building").Select(p => p.Name).Concat(Personify.Editor.World.WorldCapture.HiddenBuildingNames));
+        }
+
         internal static JObject Map()
         {
             var w = WorldData.Current;

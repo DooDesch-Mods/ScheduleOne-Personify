@@ -104,6 +104,29 @@ try
     Check("a dealer home in a doorless building warns", doorProblems.Exists(x => x.npc == 2 && x.field == "dealer.home"));
     Check("without a captured world no door warning", !Problems.Check(doors).Exists(x => x.code == "building_no_door"));
 
+    // Seat sets and buildings that are not in the captured world.
+    var refs = new WorldRefs(
+        new[] { "Map/Hyland Point/Region_Downtown/Diner/Round Outdoor Set", "Map/Hyland Point/Region_Northtown/North Waterfront/OutdoorBench (1)" },
+        new[] { "Hyland Medical Doctor's Office", "Pawn Shop" });
+    var rp2 = ProjectFiles.Create("Refs", "");
+    rp2.Npcs.Add(new JObject { ["id"] = "ref_a", ["name"] = "A", ["schedule"] = JArray.Parse(
+        "[{\"type\":\"sit\",\"time\":\"08:06\",\"seatSetPath\":\"Map/Hyland Point/Region_Northtown/Waterfront/OutdoorBench (1)\"}," +
+        "{\"type\":\"sit\",\"time\":\"11:17\",\"seatSetPath\":\"Map/Hyland Point/Region_Downtown/Diner/Round Outdoor Set/Outdoor chair\"}," +
+        "{\"type\":\"stayInBuilding\",\"time\":\"12:00\",\"building\":\"Hyland Medical\"}]") });
+    rp2.Npcs.Add(new JObject { ["id"] = "ref_b", ["name"] = "B", ["schedule"] = JArray.Parse(
+        "[{\"type\":\"sit\",\"time\":\"08:06\",\"seatSetPath\":\"map/hyland point/region_downtown/diner/round outdoor set\"}," +
+        "{\"type\":\"sit\",\"time\":\"09:00\",\"seatSetPath\":\"North Waterfront/OutdoorBench (1)\"}," +
+        "{\"type\":\"sit\",\"time\":\"10:00\",\"seatSet\":\"Round Outdoor Set\"}," +
+        "{\"type\":\"stayInBuilding\",\"time\":\"12:00\",\"building\":\"hyland medical doctor's office\"}]") });
+    var refProblems = Problems.Check(rp2, null, null, refs);
+    var seatMiss = refProblems.FindAll(x => x.code == "seat_missing");
+    var bldMiss = refProblems.FindAll(x => x.code == "building_missing");
+    Check("a seat path that is not a seat set warns", seatMiss.Exists(x => x.npc == 0 && x.step == 0 && x.area == "routine" && x.severity == "warning"));
+    Check("a path to a chair under the seat set warns", seatMiss.Exists(x => x.npc == 0 && x.step == 1));
+    Check("an unknown building warns", bldMiss.Exists(x => x.npc == 0 && x.step == 2 && x.arg == "Hyland Medical"));
+    Check("case, suffix and name matches do not warn", !refProblems.Exists(x => x.npc == 1), string.Join("; ", refProblems.ConvertAll(x => x.code + "@" + x.npc + "/" + x.step)));
+    Check("without a captured world no seat warning", !Problems.Check(rp2).Exists(x => x.code == "seat_missing" || x.code == "building_missing"));
+
     // 4. Install, state, rename, blocked.
     Check("state before install", Installer.State(mig, packs) == "not_installed");
     var ir = Installer.Install(mig, packs);

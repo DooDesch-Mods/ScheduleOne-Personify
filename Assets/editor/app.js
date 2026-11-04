@@ -1713,6 +1713,7 @@ function jumpTo(p) {
   st.active = n.id;
   st.selection = [n.id];
   if (p.area && p.area !== st.area) { st.area = p.area; ui.pick = null; }
+  if (p.area === 'routine' && typeof p.step === 'number' && p.step >= 0) ui.step = p.step;
   const idx = filteredNpcs().indexOf(n);
   if (idx < 0) { ui.search = ''; ui.roleFilter = 'all'; }
   renderEditor();
@@ -2014,9 +2015,18 @@ function placeLine(row, text, button) {
   row.appendChild(line);
 }
 
+// Exact name first. Seats then match the way S1API finds them in the game: the full scene path or a path
+// suffix, case-insensitive, and a bare seat set name against the last path part.
 function placeByName(kind, name) {
   if (!name || !st.map) return null;
-  return st.map.places.find(p => p.kind === kind && p.name === name) || null;
+  const exact = st.map.places.find(p => p.kind === kind && p.name === name);
+  if (exact || kind !== 'seat') return exact || null;
+  const want = String(name).trim().replace(/\\/g, '/').toLowerCase();
+  if (!want) return null;
+  const seats = st.map.places.filter(p => p.kind === 'seat');
+  return seats.find(p => p.name.toLowerCase() === want)
+    || seats.find(p => p.name.toLowerCase().endsWith(want.indexOf('/') >= 0 ? want : '/' + want))
+    || null;
 }
 
 // World point of a schedule step, for its pin: its own position, or the named place it goes to.

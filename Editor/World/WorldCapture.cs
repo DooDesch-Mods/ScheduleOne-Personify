@@ -31,6 +31,8 @@ namespace Personify.Editor.World
             "NPC Hiding Building",
         };
 
+        internal static IEnumerable<string> HiddenBuildingNames => HiddenBuildings;
+
         private const int MapSize = 2048;
         private static bool _running;
 

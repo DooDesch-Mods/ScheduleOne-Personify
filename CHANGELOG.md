@@ -3,6 +3,14 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.2.2] - 2026-11-04
+
+### Fixed
+
+- The problems list warns when a routine step points at a seat or building the game doesn't have. A click jumps to
+  the step.
+- Routine map pins show for seat paths that differ only in case or give just the end of the path.
+
 ## [2.2.1] - 2026-11-03
 
 ### Fixed

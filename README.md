@@ -4,8 +4,6 @@
 
 **Download:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2276) · [Thunderstore](https://thunderstore.io/c/schedule-i/p/DooDesch/Personify/) · [GitHub Releases](https://github.com/DooDesch-Mods/ScheduleOne-Personify/releases)
 
-[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de)
-
 > Build your own NPCs inside the game - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload
 > [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
@@ -18,7 +16,7 @@
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
 ![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
-[![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
+[![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de) [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j/badge.svg)](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j)
 

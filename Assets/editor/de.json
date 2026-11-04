@@ -381,6 +381,8 @@
   "The contact picture could not be taken.": "Das Kontaktbild ließ sich nicht aufnehmen.",
   "The dealer has no home.": "Der Dealer hat kein Zuhause.",
   "No NPC can enter this building; the step is skipped.": "Kein NPC kann dieses Gebäude betreten; der Schritt entfällt.",
+  "This seat is not in the game; the step is skipped.": "Diesen Sitzplatz gibt es im Spiel nicht; der Schritt entfällt.",
+  "This building is not in the game; the step is skipped.": "Dieses Gebäude gibt es im Spiel nicht; der Schritt entfällt.",
   "No NPC can enter the dealer's home.": "Kein NPC kann das Zuhause des Dealers betreten.",
   "The editor host did not answer.": "Der Editor antwortet nicht.",
   "The game could not restart.": "Das Spiel konnte nicht neu starten.",

@@ -359,11 +359,31 @@ namespace Personify.Host
         }
 
         internal static JArray ProblemsJson(PackProject p)
-            => new JArray(Problems.Check(p, GameData.KnownNpcs(), WorldBridge.DoorlessBuildings()).Select(x => new JObject
+        {
+            var list = Problems.Check(p, GameData.KnownNpcs(), WorldBridge.DoorlessBuildings(), WorldBridge.Refs());
+            LogMissingRefs(p, list);
+            return new JArray(list.Select(x => new JObject
             {
                 ["severity"] = x.severity, ["code"] = x.code, ["npc"] = x.npc, ["area"] = x.area,
-                ["field"] = x.field, ["arg"] = x.arg, ["text"] = x.text,
+                ["field"] = x.field, ["arg"] = x.arg, ["text"] = x.text, ["step"] = x.step,
             }));
+        }
+
+        // The problem list is rebuilt on every edit; each missing seat or building is logged once per editor run.
+        private static readonly HashSet<string> LoggedRefs = new HashSet<string>(StringComparer.Ordinal);
+
+        private static void LogMissingRefs(PackProject p, List<Problem> list)
+        {
+            foreach (var x in list)
+            {
+                if (x.code != "seat_missing" && x.code != "building_missing") continue;
+                var n = x.npc >= 0 && x.npc < p.Npcs.Count ? p.Npcs[x.npc] as JObject : null;
+                string id = (string)n?["id"] ?? "?", name = (string)n?["name"] ?? "?";
+                if (!LoggedRefs.Add(p.Folder + "|" + id + "|" + x.code + "|" + x.step + "|" + x.arg)) continue;
+                string what = x.code == "seat_missing" ? $"seat '{x.arg}' matches no seat set" : $"building '{x.arg}' matches no building";
+                Core.Log.Warning($"[problems] '{p.Folder}': '{id}' ({name}) schedule step {x.step + 1}: {what} in the captured world - Personnel skips this step and the Routine map has no point for it.");
+            }
+        }
 
         internal static JObject State()
         {

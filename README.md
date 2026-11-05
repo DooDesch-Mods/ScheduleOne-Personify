@@ -9,13 +9,13 @@
 > [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
 > [Side Hustle](https://www.nexusmods.com/schedule1/mods/2232) hub on the main menu.
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-2.3.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.6.0+-yellow)
 [![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de) [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j/badge.svg)](https://mlvscan.com/attestations/att_iK6H1OTw-6HHYApGyaB21t5j)
@@ -30,6 +30,14 @@
 
 ## Features
 
+- **Town NPCs as templates.** **From template** on the start page lists the town's NPCs.
+  **Copy as new NPC** takes their look, clothing, role and role values; name, routine and contacts
+  are new. **Edit** makes your version of that NPC: it replaces them in every save and keeps their
+  name, routine, home and contacts. Customers, dealers, suppliers, police and townsfolk can be
+  replaced; story NPCs can't.
+- **Cards.** When you add a card, choose **As a new NPC** or **Replaces ...** a town NPC. The cards
+  tab shows the target and can change it. A card that is already in your game can be remixed as a
+  new project.
 - **Look.** Body, hair, face, eyes, clothing, accessories and tattoos, applied live to a 3D preview
   you can rotate and zoom. Random look, and an Expert view with the full face, body and accessory
   layer stacks.
@@ -53,6 +61,7 @@
 
 | | |
 |---|---|
+| ![From template: the town's NPCs](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/templates.jpg) | ![Adding a card: as a new NPC or as a replacement](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/card-target.jpg) |
 | ![The Look area with the live 3D preview](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/editor-look.jpg) | ![The Role area of a customer](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/editor-role.jpg) |
 | ![The Routine area with the day on the town map](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/editor-routine.jpg) | ![The phone app in a loaded save](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/phone-app.jpg) |
 
@@ -67,7 +76,7 @@
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
 | Side Hustle | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2232) `3.2.1+` - the hub the editor opens from |
 | Sideload | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) `1.36.0+` - draws the editor and the phone app |
-| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.5.0+` - runs your NPCs in the game |
+| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.6.0+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation
@@ -106,6 +115,8 @@ Tips:
 - Own tattoos come from [Inkubator](https://www.nexusmods.com/schedule1/mods/2233): install its export as
   an Inkorporated pack and the tattoos show up in the picker.
 - The NPC id (`packname_npcname`) is what other mods reference; renaming an NPC changes it.
+- A replacement of a town NPC takes effect at the next game start. In co-op everyone needs the
+  same packs, also the ones that replace a town NPC.
 
 ## Configuration
 

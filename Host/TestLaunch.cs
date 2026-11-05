@@ -54,6 +54,10 @@ namespace Personify.Host
             if (!s.Flush()) return Calls.Fail("save_failed");
             var r = Project.Installer.Install(s.Project, GameData.PacksRoot, GameData.KnownNpcs());
             if (!r.ok) { Core.Log.Warning($"[test] not started: install answered {r.code} ({r.text})."); return Calls.Fail(r.code ?? "install_failed"); }
+            TemplatesBridge.ReleaseOthers(s.Project);
+            // A replacement has no NPC of its own; the test puts the player next to the vanilla NPC it takes over.
+            string replaces = Project.PackProject.ReplacesOf(s.Project.FindNpc(npcId));
+            if (replaces != null) { Core.Log.Msg($"[test] '{npcId}' replaces '{replaces}' - the test meets that NPC."); npcId = replaces; }
 
             var write = GameData.PersonnelMethod("Personnel.Testing.LaunchMarker", "Write");
             var restart = GameData.PersonnelMethod("Personnel.Testing.LaunchMarker", "RestartGame");

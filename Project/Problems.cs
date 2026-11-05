@@ -78,6 +78,10 @@ namespace Personify.Project
         public string id;
         public string name;
         public string source;
+        /// <summary>Role of a vanilla NPC from the template file (customer, dealer, supplier, police, civilian), or null.</summary>
+        public string role;
+        /// <summary>Why a card may not replace this vanilla NPC, or null.</summary>
+        public string blocked;
     }
 
     /// <summary>
@@ -103,6 +107,7 @@ namespace Personify.Project
             if (catalog != null) foreach (var k in catalog) if (k?.id != null) known[k.id] = k;
             var own = p.NpcIds();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < p.Npcs.Count; i++)
             {
@@ -120,6 +125,15 @@ namespace Personify.Project
                 }
 
                 CheckFiles(list, p, n, i);
+                string replaces = PackProject.ReplacesOf(n);
+                if (replaces != null)
+                {
+                    // A replacement keeps the vanilla routine, home and connections; only its target is checked.
+                    if (!seenTargets.Add(replaces))
+                        Add(list, "error", "replace_twice", i, "pack", "replaces", replaces, $"Two NPCs of this pack replace '{replaces}'.");
+                    CheckReplacement(list, n, i, replaces, catalog == null ? null : known);
+                    continue;
+                }
                 CheckRole(list, n, i);
                 CheckRelations(list, n, i, id, own, catalog == null ? null : known);
                 if (doorless != null) CheckDoors(list, n, i, doorless);
@@ -170,6 +184,22 @@ namespace Personify.Project
             if (string.Equals(conv, "customer", StringComparison.OrdinalIgnoreCase)) return "customer";
             if (string.Equals(conv, "dealer", StringComparison.OrdinalIgnoreCase)) return "dealer";
             return "civilian";
+        }
+
+        // Mirrors Personnel's ReplacementRules: the target must be a vanilla NPC of the same role that is not blocked.
+        private static void CheckReplacement(List<Problem> list, JObject n, int i, string target, Dictionary<string, KnownNpc> known)
+        {
+            if (known == null) return;
+            if (!known.TryGetValue(target, out var k) || k.source != "vanilla")
+            {
+                Add(list, "error", "replace_unknown", i, "pack", "replaces", target, $"'{target}' is not a vanilla NPC of the last loaded save.");
+                return;
+            }
+            if (!string.IsNullOrEmpty(k.blocked))
+                Add(list, "error", "replace_blocked", i, "pack", "replaces", target, $"{k.name} cannot be replaced: {k.blocked}.");
+            string role = Role(n);
+            if (k.role != null && !Templates.RoleFits(role, k.role))
+                Add(list, "error", "replace_role", i, "role", null, target, $"{k.name} is a {k.role}; the replacement plays {role}.");
         }
 
         private static void CheckRole(List<Problem> list, JObject n, int i)

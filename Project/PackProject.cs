@@ -103,11 +103,28 @@ namespace Personify.Project
                 foreach (var t in a)
                     if (t is JObject o) o.Remove(EditorKey);
             int v = (int?)m["schemaVersion"] ?? 1;
-            if (v < SchemaVersion) m["schemaVersion"] = SchemaVersion;
+            int need = UsesSchema4(m) ? 4 : SchemaVersion;
+            if (v < need) m["schemaVersion"] = need;
             // The editor shows "World NPC" as on while autoRegister is unset, but Personnel reads a missing value as
             // false: an NPC without its own spawn.auto would install and never appear. Write the shown state.
             if (m["autoRegister"] == null || m["autoRegister"].Type == JTokenType.Null) m["autoRegister"] = true;
             return m;
+        }
+
+        /// <summary>True when an NPC uses a schema 4 field: <c>replaces</c> (takes over a vanilla NPC) or <c>voice</c>.</summary>
+        public static bool UsesSchema4(JObject manifest)
+        {
+            if (!(manifest["npcs"] is JArray a)) return false;
+            foreach (var t in a)
+                if (t is JObject o && (!string.IsNullOrEmpty((string)o["replaces"]) || o["voice"] is JObject)) return true;
+            return false;
+        }
+
+        /// <summary>The vanilla NPC id an NPC takes over, or null for a new NPC.</summary>
+        public static string ReplacesOf(JObject npc)
+        {
+            string r = (string)npc?["replaces"];
+            return string.IsNullOrWhiteSpace(r) ? null : r.Trim();
         }
     }
 }

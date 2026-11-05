@@ -214,6 +214,58 @@ try
     policePack.Npcs.Add(dutyNpc);
     Check("a routine on an officer warns", Problems.Check(policePack).Exists(x => x.code == "police_schedule"), string.Join("; ", Problems.Check(policePack).ConvertAll(x => x.code)));
 
+    // 6d. Vanilla NPCs as templates and replacements.
+    string tplFile = Path.Combine(root, "templates.json");
+    File.WriteAllText(tplFile, "{\"npcs\":[" +
+        "{\"id\":\"benji_coleman\",\"name\":\"Benji Coleman\",\"role\":\"dealer\",\"region\":\"Northtown\",\"npc\":{\"name\":\"Benji Coleman\",\"appearance\":{\"hairPath\":\"afro\",\"height\":1.0}," +
+            "\"voice\":{\"from\":\"benji_coleman\",\"pitch\":0.91},\"dealer\":{\"cut\":0.2,\"signingFee\":500,\"home\":\"Benji's room\",\"type\":\"player\"}}}," +
+        "{\"id\":\"kyle_cooley\",\"name\":\"Kyle Cooley\",\"role\":\"customer\",\"npc\":{\"name\":\"Kyle Cooley\",\"appearance\":{\"height\":0.9},\"customer\":{\"spending\":{\"min\":100,\"max\":400}}}}," +
+        "{\"id\":\"uncle_nelson\",\"name\":\"Uncle Nelson\",\"role\":\"civilian\",\"blocked\":\"a story NPC\",\"npc\":{\"name\":\"Uncle Nelson\"}}," +
+        "{\"id\":\"broken\"}]}");
+    var tpls = Templates.Read(tplFile);
+    Check("template file reads every complete entry, sorted by name", tpls?.Count == 3 && tpls[0].id == "benji_coleman" && tpls[2].id == "uncle_nelson",
+          tpls == null ? "null" : string.Join(",", tpls.Select(x => x.id)));
+    Check("a missing template file reads as null", Templates.Read(Path.Combine(root, "nope.json")) == null);
+    Check("role fit: same role, civilian over customer, not dealer over customer",
+          Templates.RoleFits("dealer", "dealer") && Templates.RoleFits("civilian", "customer") && !Templates.RoleFits("dealer", "customer") && !Templates.RoleFits("customer", "civilian"));
+
+    var tp = ProjectFiles.Create("Tpl Pack", "");
+    var benji = tpls[0];
+    var copy = Templates.Copy(tp, (JObject)benji.npc.DeepClone(), "Ben Two", null, benji.id, new NpcFactory.Hints { DealerHome = "Motel Room 1" });
+    tp.Npcs.Add(copy);
+    Check("template copy gets a new name and id", (string)copy["name"] == "Ben Two" && (string)copy["id"] == "tpl_pack_ben_two" && copy["replaces"] == null);
+    Check("template copy keeps look, voice and role values", (string)copy["appearance"]?["hairPath"] == "afro" && (double?)copy["voice"]?["pitch"] == 0.91
+          && (double?)copy["dealer"]?["cut"] == 0.2 && (int?)copy["dealer"]?["signingFee"] == 500);
+    Check("template copy as a new dealer keeps the vanilla home it copied", (string)copy["dealer"]?["home"] == "Benji's room");
+
+    var kyleCopy = Templates.Copy(tp, (JObject)tpls[1].npc.DeepClone(), "Kyla", null, "kyle_cooley", new NpcFactory.Hints { Connection = "kyle_cooley" });
+    Check("template customer copy gets a voice from its source and a connection", (string)kyleCopy["voice"]?["from"] == "kyle_cooley"
+          && (string)kyleCopy["relationships"]?["connections"]?[0] == "kyle_cooley" && (int?)kyleCopy["customer"]?["spending"]?["max"] == 400,
+          kyleCopy.ToString(Newtonsoft.Json.Formatting.None));
+
+    var repl = Templates.Copy(tp, (JObject)benji.npc.DeepClone(), benji.name, benji.id, benji.id, null);
+    tp.Npcs.Add(repl);
+    Check("a replacement keeps the vanilla name and points at it", (string)repl["name"] == "Benji Coleman" && PackProject.ReplacesOf(repl) == "benji_coleman");
+    Check("a replacement drops home and dealer type", repl["dealer"]?["home"] == null && repl["dealer"]?["type"] == null && (double?)repl["dealer"]?["cut"] == 0.2);
+    Check("a replacement has no routine or connections", repl["schedule"] == null && repl["relationships"] == null);
+
+    var tplKnown = tpls.Select(x => new KnownNpc { id = x.id, name = x.name, source = "vanilla", role = x.role, blocked = x.blocked }).ToList();
+    var tplProbs = Problems.Check(tp, tplKnown);
+    Check("a valid replacement raises no replace error", !tplProbs.Exists(x => x.code.StartsWith("replace_")), string.Join("; ", tplProbs.ConvertAll(x => x.code)));
+    Check("schema 4 only when a replacement or voice is in the pack", PackProject.UsesSchema4(tp.InstallManifest()) && (int?)tp.InstallManifest()["schemaVersion"] == 4
+          && !PackProject.UsesSchema4(JObject.Parse("{\"npcs\":[{\"id\":\"a\"}]}")));
+
+    var bad2 = (JObject)repl.DeepClone(); bad2["id"] = "tpl_pack_twice";
+    var nelson = new JObject { ["id"] = "tpl_pack_nelson", ["name"] = "N", ["replaces"] = "uncle_nelson" };
+    var ghost = new JObject { ["id"] = "tpl_pack_ghost", ["name"] = "G", ["replaces"] = "nobody_here" };
+    var wrongRole = new JObject { ["id"] = "tpl_pack_wrong", ["name"] = "W", ["replaces"] = "kyle_cooley", ["dealer"] = new JObject { ["cut"] = 0.3 } };
+    tp.Npcs.Add(bad2); tp.Npcs.Add(nelson); tp.Npcs.Add(ghost); tp.Npcs.Add(wrongRole);
+    var badProbs = Problems.Check(tp, tplKnown);
+    foreach (string c in new[] { "replace_twice", "replace_blocked", "replace_unknown", "replace_role" })
+        Check("problem " + c, badProbs.Exists(x => x.code == c && x.severity == "error"), string.Join("; ", badProbs.ConvertAll(x => x.code)));
+    Check("without a catalog a replacement target is not judged", !Problems.Check(tp).Exists(x => x.code == "replace_unknown" || x.code == "replace_blocked"));
+    Check("a replacement skips routine and relation checks", !badProbs.Exists(x => (x.npc == 1) && (x.area == "routine" || x.area == "relations")));
+
     var es = new EditSession(ep);
     double t0 = 100;
     es.Set(new[] { "edit_pack_ana", "edit_pack_sully" }, "appearance.height", 1.1, t0);

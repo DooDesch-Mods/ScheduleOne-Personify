@@ -122,13 +122,25 @@ namespace Personify.Host
                 var o = Obj(a);
                 var s2 = Need();
                 string role = (string)o["role"] ?? "civilian";
-                JObject look = StartLook(s2.Project, (string)o["look"] ?? "random");
+                string template = (string)o["template"];
                 JObject n = null;
-                s2.Change("add", () =>
+                if (!string.IsNullOrEmpty(template))
                 {
-                    n = NpcFactory.Create(s2.Project, (string)o["name"], role, look, GameData.Hints());
-                    s2.Project.Npcs.Add(n);
-                }, EditorHost.Now);
+                    // A vanilla template brings look, role values and voice; the role step does not apply.
+                    var copy = TemplatesBridge.CopyFrom(s2.Project, template, (string)o["name"], false);
+                    if (copy == null) return Fail("template_missing");
+                    s2.Change("add", () => { n = copy; s2.Project.Npcs.Add(n); }, EditorHost.Now);
+                    role = Problems.Role(n);
+                }
+                else
+                {
+                    JObject look = StartLook(s2.Project, (string)o["look"] ?? "random");
+                    s2.Change("add", () =>
+                    {
+                        n = NpcFactory.Create(s2.Project, (string)o["name"], role, look, GameData.Hints());
+                        s2.Project.Npcs.Add(n);
+                    }, EditorHost.Now);
+                }
                 string id = (string)n["id"];
                 Core.Log.Msg($"[editor] NPC '{id}' added as {role}.");
                 EditorHost.ShowPreview(id);
@@ -238,6 +250,7 @@ namespace Personify.Host
                 Core.Log.Msg($"[editor] install '{s2.Project.Folder}': {r.code} - {r.text}");
                 var d = Delta();
                 d["ok"] = r.ok; d["code"] = r.code; d["text"] = r.text;
+                if (r.ok) d["superseded"] = TemplatesBridge.ReleaseOthers(s2.Project);
                 return d;
             });
             On("uninstall", _ =>
@@ -278,6 +291,10 @@ namespace Personify.Host
             On("cards.folders", _ => CardsBridge.Folders());
             On("cards.openFolder", a => CardsBridge.OpenFolder(a));
             On("cards.remix", a => CardsBridge.Remix(a));
+            On("cards.setTarget", a => { var o = Obj(a); return TemplatesBridge.SetCardTarget((string)o["code"], (string)o["target"]); });
+            On("templates.list", _ => TemplatesBridge.List());
+            On("templates.editVanilla", a => TemplatesBridge.EditVanilla(a));
+            On("templates.newProject", a => { var o = Obj(a); return TemplatesBridge.NewFromTemplate((string)o["id"], (string)o["name"]); });
             On("vault.state", _ => CardsBridge.VaultState());
             On("vault.connect", _ => CardsBridge.VaultConnect());
             On("vault.disconnect", _ => CardsBridge.VaultDisconnect());

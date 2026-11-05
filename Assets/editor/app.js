@@ -670,6 +670,7 @@ function goStart() {
   st.projects = call('projects.list') || [];
   st.packs = call('packs.list') || [];
   st.wall = call('faces.wall') || {};
+  tpl.list = null;
   loadCards();
   if (ui.startTab === 'vault' && !cards.list && !cards.loading) { loadVault(false); return; }
   renderStart();
@@ -747,6 +748,7 @@ function renderStart() {
   wh.appendChild(el('div', 'sp'));
   if (ui.startTab === 'projects') {
     wh.appendChild(btn(t('Import pack'), null, importDialog, 'import'));
+    wh.appendChild(btn(t('From template'), null, templateDialog, 'copy'));
     wh.appendChild(btn(t('New project'), 'go', newProjectDialog, 'plus'));
   } else if (ui.startTab === 'cards') {
     wh.appendChild(btn(t('Card folder'), null, () => openCardFolder('import'), 'folder'));
@@ -1021,7 +1023,9 @@ function renderCardsTab(sc) {
     bits.push(String(c.code || '').toUpperCase());
     tx.appendChild(el('div', 'psub', bits.join(' · ')));
     if (c.basedOn) tx.appendChild(el('div', 'ptag', t('Remix of {code}', { code: String(c.basedOn).toUpperCase() })));
+    if (c.replaces) tx.appendChild(el('div', 'ptag', t('Replaces {name}', { name: templateName(c.replaces) })));
     r.appendChild(tx);
+    r.appendChild(btn(c.replaces ? t('Change target') : t('Replace a town NPC'), 'sm', () => cardTargetDialog(c), 'user'));
     r.appendChild(ibtn('remix', t('Remix as new project'), () => remixInstalled(c.code), 'ghost'));
     r.appendChild(ibtn('trash', t('Remove'), () => confirmDialog(t('Remove {name}?', { name: c.name || c.code }),
       t('Saves that contain this NPC lose it the next time they load.'), t('Remove'), () => {
@@ -1040,7 +1044,19 @@ function installCardFile(path) {
   if (r.ok === false) { toast(r.message || errText(r.error), 'bad'); return; }
   console.log('[personify] card ' + r.code + ' installed from ' + path + (r.alreadyInstalled ? ' (already there)' : ''));
   toast(r.alreadyInstalled ? t('{name} is already in your game.', { name: r.name }) : t('{name} added. Restart the game to meet them.', { name: r.name }), 'ok');
-  if (ui.screen === 'start') goStart();
+  const done = () => { if (ui.screen === 'start') goStart(); };
+  if (r.alreadyInstalled) { done(); return; }
+  // A new card asks once whether it joins as a new NPC or takes over a town NPC of its role.
+  loadCards();
+  const c = cards.installed.find(x => x.code === r.code);
+  const tl = loadTemplates();
+  if (!c) { console.warn('[personify] card ' + r.code + ' is not in cards.installed after the import'); done(); return; }
+  if (!tl.personnelReady || !tl.available || !replaceTargets(c.role).length) {
+    console.log('[personify] card ' + r.code + ' joins as a new NPC (no replace choice: ready=' + tl.personnelReady + ', templates=' + tl.available + ')');
+    done();
+    return;
+  }
+  cardTargetDialog(c, done);
 }
 
 function remixInstalled(code) {
@@ -1055,6 +1071,164 @@ function remixCard(path) {
   if (!r || r.ok === false) { toast((r && r.text) || errText(r && r.error), 'bad'); return; }
   console.log('[personify] remix started in ' + r.folder);
   openProject(r.folder);
+}
+
+/* --- vanilla NPCs as templates, replacements --- */
+
+Object.assign(ERRORS, {
+  template_missing: T('Load a save with Personnel 2.6 or newer once first.'),
+  replace_blocked: T('This NPC cannot be replaced.'),
+  personnel_too_old: T('Personnel 2.6 or newer is needed.'),
+  card_not_found: T('This card is not in your game.'),
+  target_failed: T('The choice could not be saved.'),
+  bad_answer: T('Personnel sent an answer the editor cannot read.'),
+});
+const TEMPLATE_ROLES = { customer: T('Customer'), dealer: T('Dealer'), supplier: T('Supplier'), police: T('Police'), civilian: T('Civilian') };
+const tpl = { list: null };
+
+function loadTemplates() {
+  const r = call('templates.list');
+  if (!r || r.ok === false) console.warn('[personify] templates.list answered ' + JSON.stringify(r));
+  tpl.list = r && r.ok !== false ? r : { available: false, personnelReady: false, npcs: [] };
+  return tpl.list;
+}
+
+function templateOf(id) {
+  const list = (tpl.list || loadTemplates()).npcs || [];
+  const key = String(id || '').toLowerCase();
+  return list.find(x => String(x.id).toLowerCase() === key) || null;
+}
+const templateName = id => (templateOf(id) || {}).name || id;
+const templateRole = r => t(TEMPLATE_ROLES[r] || TEMPLATE_ROLES.civilian);
+
+// The vanilla NPCs a card of `role` may take over: same role (a townsfolk card also over a customer), not blocked.
+function replaceTargets(role) {
+  const list = (tpl.list || loadTemplates()).npcs || [];
+  const r = role === 'townsfolk' || !role ? 'civilian' : role;
+  return list.filter(x => !x.blocked && (x.role === r || (r === 'civilian' && x.role === 'customer')));
+}
+
+function templateDialog() {
+  const r = loadTemplates();
+  const box = openDialog('medium');
+  dialogHead(box, t('From template'));
+  const acts = el('div', 'dacts');
+  acts.appendChild(el('div', 'sp'));
+  acts.appendChild(btn(t('Close'), null, closeDialog));
+  if (!r.available) {
+    box.appendChild(el('div', 'quiet', t('Load a save with Personnel 2.6 or newer once. Then the town\'s NPCs show up here.')));
+    box.appendChild(acts);
+    return;
+  }
+  box.appendChild(el('div', 'dsub', t('A copy takes the look, clothing, role and its values. Editing changes the NPC in every save.')));
+  let q = '';
+  let role = 'all';
+  const bar = el('div', 'tbar');
+  bar.appendChild(textInput('', t('Search'), v => { q = v; fill(); }, { onInput: v => { q = v; fill(); } }));
+  bar.appendChild(selectEl([['all', t('All roles')]].concat(Object.keys(TEMPLATE_ROLES).map(k => [k, templateRole(k)])), role, v => { role = v; fill(); }));
+  box.appendChild(bar);
+  const list = el('div', 'scroll tlist');
+  box.appendChild(list);
+  box.appendChild(acts);
+  fill();
+
+  function fill() {
+    list.replaceChildren();
+    const needle = q.trim().toLowerCase();
+    const shown = r.npcs.filter(x => (role === 'all' || x.role === role) && (!needle || String(x.name).toLowerCase().includes(needle)));
+    if (!shown.length) list.appendChild(el('div', 'quiet', t('No NPC matches.')));
+    for (const x of shown) {
+      const row = el('div', 'prow');
+      const tx = el('div', 'pt');
+      tx.appendChild(el('div', 'pnm', x.name));
+      tx.appendChild(el('div', 'psub', templateRole(x.role) + (x.region ? ' · ' + x.region : '')));
+      if (x.replacedBy) tx.appendChild(el('div', 'ptag', t('Replaced by {pack}', { pack: String(x.replacedBy).split('/')[0] })));
+      row.appendChild(tx);
+      row.appendChild(btn(t('Copy as new NPC'), 'sm', () => newFromTemplate(x), 'copy'));
+      const can = r.personnelReady && !x.blocked;
+      const eb = btn(t('Edit'), 'sm' + (can ? '' : ' off'), () => { if (can) editVanilla(x); }, 'user');
+      tip(eb, !r.personnelReady ? t(ERRORS.personnel_too_old) : x.blocked ? t('Cannot be replaced: {why}.', { why: x.blocked }) : t('Changes {name} in every save.', { name: x.name }));
+      row.appendChild(eb);
+      list.appendChild(row);
+    }
+  }
+}
+
+// The vanilla id the open NPC replaces, or null.
+function replacingActive() {
+  const n = typeof npcById === 'function' ? npcById(st.active) : null;
+  const r = n && typeof n.replaces === 'string' ? n.replaces.trim() : '';
+  return r || null;
+}
+
+function newFromTemplate(x) {
+  const r = call('templates.newProject', { id: x.id });
+  if (!r || r.ok === false) { toast(errText(r && r.error), 'bad'); return; }
+  console.log('[personify] new project ' + r.folder + ' from template ' + x.id);
+  closeDialog();
+  openProject(r.folder);
+}
+
+function editVanilla(x) {
+  const r = call('templates.editVanilla', x.id);
+  if (!r || r.ok === false) { toast((r && r.text) || errText(r && r.error), 'bad'); return; }
+  console.log('[personify] project ' + r.folder + ' edits vanilla ' + x.id);
+  closeDialog();
+  openProject(r.folder);
+}
+
+// "Add as new NPC" or "Replaces ..." for an installed card. `after` runs once the choice is stored.
+function cardTargetDialog(c, after) {
+  const r = tpl.list || loadTemplates();
+  const targets = r.available ? replaceTargets(c.role) : [];
+  const box = openDialog('small');
+  dialogHead(box, t('How should {name} join?', { name: c.name || c.code }));
+  const can = r.personnelReady && r.available && targets.length > 0;
+  // mode: 'new' or 'replace'; target: the vanilla id picked in the list.
+  let mode = c.replaces && can ? 'replace' : 'new';
+  let target = (c.replaces && targets.some(x => x.id === c.replaces)) ? c.replaces : (targets[0] || {}).id || '';
+  const opts = el('div', 'roles');
+  const optNew = el('div', 'rc');
+  optNew.appendChild(el('div', 'rcn', t('As a new NPC')));
+  optNew.appendChild(el('div', 'rcs', t('Moves into town next to everyone else.')));
+  const optRepl = el('div', 'rc' + (can ? '' : ' off'));
+  optRepl.appendChild(el('div', 'rcn', t('Replaces a town NPC')));
+  optRepl.appendChild(el('div', 'rcs', t('Keeps that NPC\'s name, routine, connections and save data.')));
+  opts.appendChild(optNew);
+  opts.appendChild(optRepl);
+  box.appendChild(opts);
+  const show = () => { setCls(optNew, 'on', mode === 'new'); setCls(optRepl, 'on', mode === 'replace'); };
+  optNew.addEventListener('click', () => { mode = 'new'; show(); });
+  optRepl.addEventListener('click', () => { if (can) { mode = 'replace'; show(); } });
+  show();
+  if (!can) {
+    box.appendChild(el('div', 'quiet', !r.personnelReady ? t(ERRORS.personnel_too_old)
+      : !r.available ? t('Load a save with Personnel 2.6 or newer once. Then the town\'s NPCs show up here.')
+      : t('No town NPC with this role can be replaced.')));
+  } else {
+    const f = el('div', 'df');
+    f.appendChild(el('div', 'dl', t('Replaces')));
+    f.appendChild(selectEl(targets.map(x => [x.id, x.name + (x.replacedBy && x.id !== c.replaces ? ' · ' + t('replaced now') : '')]), target, v => {
+      target = v; mode = 'replace'; show();
+    }));
+    box.appendChild(f);
+  }
+  const acts = el('div', 'dacts');
+  acts.appendChild(el('div', 'sp'));
+  acts.appendChild(btn(t('Cancel'), null, () => { closeDialog(); if (after) after(); }));
+  acts.appendChild(btn(t('Save'), 'go', () => {
+    const chosen = mode === 'replace' ? target : '';
+    if (chosen === (c.replaces || '')) { closeDialog(); if (after) after(); return; }
+    const res = call('cards.setTarget', { code: c.code, target: chosen });
+    if (!res || res.ok === false) { toast(errText(res && res.error), 'bad'); return; }
+    console.log('[personify] card ' + c.code + ' target ' + (chosen || 'none'));
+    closeDialog();
+    for (const s of res.superseded || []) toast(t('{old} no longer replaces {name}.', { old: s.name || s.npcId, name: templateName(s.target) }), 'warn');
+    toast(chosen ? t('{name} replaces {target} from the next start.', { name: c.name || c.code, target: templateName(chosen) })
+      : t('{name} joins as a new NPC from the next start.', { name: c.name || c.code }), 'ok');
+    if (after) after(); else if (ui.screen === 'start') goStart();
+  }));
+  box.appendChild(acts);
 }
 
 function openCardFolder(which) {
@@ -1383,7 +1557,11 @@ function renderTop() {
 
   const tabs = E.tabs;
   tabs.replaceChildren();
+  // A replacement keeps the vanilla routine and connections, so those areas do not apply.
+  const repl = replacingActive();
+  if (repl && (st.area === 'routine' || st.area === 'relations')) st.area = 'look';
   for (const [id, label] of AREAS) {
+    if (repl && (id === 'routine' || id === 'relations')) continue;
     const tb = el('div', st.area === id ? 'tab on' : 'tab', t(label));
     tb.addEventListener('click', () => setArea(id));
     tabs.appendChild(tb);
@@ -1734,8 +1912,9 @@ function doInstall() {
   if (!r) { toast(t('The editor host did not answer.'), 'bad'); return; }
   applyDelta(r);
   if (r.ok === false) { console.error('[personify] install failed: ' + (r.code || '') + ' ' + (r.text || '')); toast(errText(r.code), 'bad'); return; }
-  console.log('[personify] installed, code ' + r.code);
+  console.log('[personify] installed, code ' + r.code + ', superseded ' + JSON.stringify(r.superseded || []));
   toast(t('The pack is in your game.'), 'ok');
+  for (const s of r.superseded || []) toast(t('{old} no longer replaces {name}.', { old: s.name || s.npcId, name: templateName(s.target) }), 'warn');
 }
 
 function testDialog() {
@@ -2229,6 +2408,14 @@ function renderFields() {
     E.fhead.appendChild(mk);
   }
   const box = E.fbody;
+  const repl = !multi() && replacingActive();
+  if (repl) {
+    const b = el('div', 'cnote');
+    b.appendChild(icon('user'));
+    b.appendChild(el('div', 'grow', t('Replaces {name}. Name, routine, home and connections stay from the game.', { name: templateName(repl) })));
+    box.appendChild(b);
+    if (st.area === 'routine' || st.area === 'relations') { st.area = 'look'; renderTop(); }
+  }
   if (st.area === 'look') buildLook(box, n);
   else if (st.area === 'role') buildRole(box, n);
   else if (st.area === 'routine') buildRoutine(box, n);
@@ -3462,7 +3649,17 @@ function wizard() {
           tp.id === 'menu' ? t('The character standing in the main menu.') : t('A ready-made look.'));
       }
       if (npcs().length) opt('copy', t('Copy of an NPC'), t('Same look as an NPC of this project.'));
+      // Town NPCs of the chosen role: look, clothing, voice and role values; name and routine stay new.
+      const town = ((tpl.list || loadTemplates()).npcs || []).filter(x => x.role === w.role);
+      if (town.length) opt('vanilla', t('Copy of a town NPC'), t('Look, clothing, voice and role values of an NPC from the game.'));
       box.appendChild(looks);
+      if (w.look === 'vanilla' && town.length) {
+        if (!town.some(x => x.id === w.vanilla)) w.vanilla = town[0].id;
+        const f = el('div', 'df');
+        f.appendChild(el('div', 'dl', t('Copy from')));
+        f.appendChild(selectEl(town.map(x => [x.id, x.name]), w.vanilla, v => { w.vanilla = v; }));
+        box.appendChild(f);
+      }
       if (w.look === 'copy' && npcs().length) {
         const f = el('div', 'df');
         f.appendChild(el('div', 'dl', t('Copy from')));
@@ -3480,8 +3677,9 @@ function wizard() {
     function next() {
       if (w.step === 0 && !w.name.trim()) { err.textContent = t('Enter a name.'); err.style.display = 'flex'; return; }
       if (w.step < 2) { w.step++; draw(); return; }
-      const look = w.look === 'copy' ? 'copy:' + (w.copy || npcs()[0].id) : w.look;
-      const ps = call('npc.add', { name: w.name.trim(), role: w.role, look });
+      const vanilla = w.look === 'vanilla' ? w.vanilla : null;
+      const look = w.look === 'copy' ? 'copy:' + (w.copy || npcs()[0].id) : vanilla ? 'random' : w.look;
+      const ps = call('npc.add', vanilla ? { name: w.name.trim(), role: w.role, look, template: vanilla } : { name: w.name.trim(), role: w.role, look });
       if (!ps || ps.ok === false) { err.textContent = errText(ps && ps.error); err.style.display = 'flex'; return; }
       closeDialog();
       ui.search = '';
@@ -3489,7 +3687,7 @@ function wizard() {
       st.area = 'look';
       applyState(ps);
       if (npcVl) npcVl.reveal(filteredNpcs().findIndex(x => x.id === st.active));
-      console.log('[personify] NPC ' + ps.added + ' added as ' + w.role + ' with look ' + look);
+      console.log('[personify] NPC ' + ps.added + ' added as ' + w.role + (vanilla ? ' copied from town NPC ' + vanilla : ' with look ' + look));
     }
   }
 }

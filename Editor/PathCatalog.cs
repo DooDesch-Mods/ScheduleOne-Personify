@@ -187,6 +187,29 @@ namespace Personify.Editor
             return list;
         }
 
+        private static Dictionary<string, string> _byId;
+
+        /// <summary>
+        /// The catalog path of an avatar object id ("afro" -&gt; "Avatar/Hair/Afro/Afro"), or the value itself when it is
+        /// already a path or no catalog entry resolves to it. A look captured from a live avatar names its pieces by
+        /// object id; the pickers store paths.
+        /// </summary>
+        public static string PathOf(string idOrPath)
+        {
+            if (string.IsNullOrWhiteSpace(idOrPath) || idOrPath.IndexOf('/') >= 0) return idOrPath;
+            if (_byId == null && DooDesch.AvatarKit.AvatarLook.LibraryReady)
+            {
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var o in HairStyles().Concat(FaceLayers()).Concat(BodyLayers()).Concat(Accessories()).Concat(Tattoos()))
+                    if (DooDesch.AvatarKit.AvatarLook.TryResolve(o.Path, out var obj) && obj != null && !string.IsNullOrEmpty(obj.Id) && !map.ContainsKey(obj.Id))
+                        map[obj.Id] = o.Path;
+                _byId = map;
+                Core.Log?.Msg($"[catalog] {map.Count} avatar object id(s) mapped to catalog paths.");
+            }
+            if (_byId != null && _byId.TryGetValue(idOrPath, out string path)) return path;
+            return idOrPath;
+        }
+
         private static List<PathOption> Without(List<PathOption> src, params string[] exclude)
         {
             var set = new HashSet<string>(exclude, StringComparer.OrdinalIgnoreCase);

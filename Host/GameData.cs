@@ -54,9 +54,45 @@ namespace Personify.Host
             }
         }
 
-        /// <summary>The catalog in the shape the problem check takes; null without a catalog.</summary>
+        /// <summary>The catalog in the shape the problem check takes; null without a catalog. Vanilla NPCs carry role
+        /// and block reason from the template file when Personnel wrote one.</summary>
         internal static List<KnownNpc> KnownNpcs()
-            => Npcs()?.Select(n => new KnownNpc { id = n.id, name = n.name, source = n.source }).ToList();
+        {
+            var npcs = Npcs();
+            if (npcs == null) return null;
+            var tpl = Templates()?.ToDictionary(t => t.id, StringComparer.OrdinalIgnoreCase);
+            return npcs.Select(n =>
+            {
+                var k = new KnownNpc { id = n.id, name = n.name, source = n.source };
+                if (tpl != null && tpl.TryGetValue(n.id, out var t)) { k.role = t.role; k.blocked = t.blocked; }
+                return k;
+            }).ToList();
+        }
+
+        internal static string TemplatesFile => Path.Combine(Paths.Root, "World", "templates.json");
+
+        private static List<Project.Templates.Entry> _templates;
+        private static DateTime _templatesStamp;
+
+        /// <summary>Vanilla NPCs as templates from the last loaded save; null when Personnel 2.6+ has not written them yet.</summary>
+        internal static List<Project.Templates.Entry> Templates()
+        {
+            try
+            {
+                if (!File.Exists(TemplatesFile)) return null;
+                var stamp = File.GetLastWriteTimeUtc(TemplatesFile);
+                if (_templates != null && stamp == _templatesStamp) return _templates;
+                _templates = Project.Templates.Read(TemplatesFile);
+                _templatesStamp = stamp;
+                Core.Log.Msg($"[world] templates read: {_templates?.Count ?? 0} vanilla NPC(s) from {TemplatesFile}.");
+                return _templates;
+            }
+            catch (Exception e)
+            {
+                Core.Log.Error($"[world] reading the templates {TemplatesFile} failed: {e.Message}");
+                return null;
+            }
+        }
 
         /// <summary>Defaults for a new NPC: a vanilla customer as the first connection, a motel room as dealer home.</summary>
         internal static NpcFactory.Hints Hints()

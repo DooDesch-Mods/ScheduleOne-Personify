@@ -20,6 +20,9 @@
 
 ## What it does
 
+- **Town NPCs as templates:** copy a town NPC as a new one, or edit a town NPC directly. Your
+  version replaces them in every save and keeps their name, routine and contacts. Story NPCs stay.
+- **Cards:** when you add a card, choose whether it joins as a new NPC or replaces a town NPC.
 - **Look, Role, Routine, Relations** in one editor, with a live 3D preview, random look, undo and redo,
   and edits on several NPCs at once.
 - **Roles:** civilian, customer, dealer, supplier or police, each with its own settings.
@@ -34,6 +37,8 @@
 
 ## Screenshots
 
+![From template: the town's NPCs](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/templates.jpg)
+
 ![The Look area with the live 3D preview](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/editor-look.jpg)
 
 ![The Routine area with the day on the town map](https://raw.githubusercontent.com/DooDesch-Mods/ScheduleOne-Personify/main/docs/img/editor-routine.jpg)
@@ -41,7 +46,7 @@
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.
-- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.5.0+ (pulled in as dependencies).
+- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.6.0+ (pulled in as dependencies).
 - Optional: **Inkorporated** (tattoo packs in the editor).
 
 ## Usage

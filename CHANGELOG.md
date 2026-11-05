@@ -3,6 +3,19 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - 2026-11-05
+
+### Added
+
+- Start a new NPC as a copy of a town NPC: their look, clothing and role come along, name and routine are new.
+- Edit a town NPC directly. Your version replaces them in every save and keeps their name, routine and contacts.
+- When you add a card, choose whether it joins as a new NPC or replaces a town NPC. The cards tab can change it.
+- Cards in your game can be remixed as a new project, also those from NPC Vault and NPC Cards.
+
+### Changed
+
+- Needs Personnel 2.6.0.
+
 ## [2.2.2] - 2026-11-04
 
 ### Fixed

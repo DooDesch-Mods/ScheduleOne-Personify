@@ -97,15 +97,24 @@ function StopSlotGame {
     foreach ($p in $procs) { Write-Host "[test] stopping pid $($p.ProcessId) in $Slot"; Stop-Process -Id $p.ProcessId -Force }
 }
 
+# shstart is a debug command of Side Hustle. Profile main runs the player's release build, so there the hub's own
+# "Play solo" action starts the gamemode.
+function StartPersonify {
+    if ($Profile -eq 'main') {
+        return @(& python -I $s1 --slot $Slot eval sidehustle-hub "act('hub.play', 'doodesch.personify'); 'ok'" 2>&1 | ForEach-Object { "$_" })
+    }
+    return @(& python -I $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+}
+
 function OpenEditor {
-    $null = @(& python -I $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+    $answer = StartPersonify
     # The shstart call can land while the menu scene is still coming up; retry until the editor answers.
     for ($i = 0; $i -lt 12; $i++) {
         $screen = Eval 'typeof ui === "object" ? ui.screen : "none"'
         if ($screen -eq 'start' -or $screen -eq 'editor') { return $screen }
         Write-Host "[test] editor not up yet ($screen), asking again"
         Start-Sleep -Seconds 2
-        $answer = @(& python -I $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+        $answer = StartPersonify
     }
     Write-Host "[test] last shstart answer: $($answer -join ' | ')"
     if ($screen -ne 'start' -and $screen -ne 'editor') {
@@ -123,9 +132,12 @@ $packsDir = Join-Path $script:gameRoot 'UserData\Personnel\Packs'
 
 try {
     if (-not $NoBoot) {
+        # Profile main already carries Side Hustle like the real install and takes only store mods in -Mods. Its
+        # Sideload is a release build without the probe that eval and click go through, so a Debug Sideload
+        # replaces it; every other mod stays as installed.
+        $builds = if ($Profile -eq 'main') { "$checkout,$Personnel,Sideload" } else { "$checkout,$Personnel" }
         $argv = @('-NoProfile', '-File', $session, '-Slot', $Slot, '-Profile', $Profile, '-Save', "$Save", '-NoApp',
-                  '-Build', "$checkout,$Personnel")
-        # Profile main already carries Side Hustle like the real install and takes only store mods in -Mods.
+                  '-Build', $builds)
         if ($Profile -eq 'stack') { $argv += @('-Mods', 'SideHustle') }
         Write-Host "[test] session.ps1 $($argv[3..($argv.Count - 1)] -join ' ')"
         & pwsh @argv

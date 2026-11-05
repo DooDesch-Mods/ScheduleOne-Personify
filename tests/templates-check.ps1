@@ -38,6 +38,7 @@ $call = Join-Path $PSScriptRoot 'bridge_call.py'
 $app = 'personify-editor'
 $copyName = 'Tpl Check Copy'
 $editPack = $null
+$script:installedPacks = @()
 
 $results = [System.Collections.Generic.List[object]]::new()
 function Check([string]$name, [bool]$ok, [string]$detail) {
@@ -181,9 +182,12 @@ try {
 
     # Edit the voice pitch and the cut, then install.
     $null = Eval "setActive(npcs()[0].id); write([{path: 'voice.pitch', value: 1.37}, {path: 'dealer.cut', value: 0.45}]); 'ok'"
+    $packsBefore = @(Get-ChildItem -LiteralPath $packsDir -Directory -ErrorAction SilentlyContinue | ForEach-Object Name)
     $inst = EvalJson "JSON.stringify(call('install'))"
     Check 'install succeeds' ($inst.ok -ne $false) "$($inst | ConvertTo-Json -Compress -Depth 4)"
-    $man = Get-ChildItem -LiteralPath $packsDir -Directory | ForEach-Object { Join-Path $_.FullName 'manifest.json' } |
+    # Only the folders the install created count, and only those are removed at the end.
+    $script:installedPacks = @(Get-ChildItem -LiteralPath $packsDir -Directory | Where-Object { $packsBefore -notcontains $_.Name })
+    $man = $script:installedPacks | ForEach-Object { Join-Path $_.FullName 'manifest.json' } |
            Where-Object { Test-Path -LiteralPath $_ } | ForEach-Object { [pscustomobject]@{ Path = $_; Json = (Get-Content -Raw -LiteralPath $_ | ConvertFrom-Json) } } |
            Where-Object { @($_.Json.npcs | Where-Object replaces -eq $Target).Count -gt 0 } | Select-Object -First 1
     $mn = @($man.Json.npcs | Where-Object replaces -eq $Target)[0]
@@ -205,7 +209,8 @@ try {
 } finally {
     if (-not $NoBoot) { try { StopSlotGame } catch { Write-Warning "[test] stopping the game failed: $_" } }
     # The slot is rebuilt from the stack on the next start; the installed test pack and projects go with it.
-    foreach ($d in @(Get-ChildItem -LiteralPath $packsDir -Directory -ErrorAction SilentlyContinue | Where-Object { $editPack -and $_.Name -like "$editPack*" })) {
+    if (-not $script:installedPacks) { Write-Host '[test] no installed test pack to remove' }
+    foreach ($d in @($script:installedPacks)) {
         try { Remove-Item -LiteralPath $d.FullName -Recurse -Force; Write-Host "[test] removed pack $($d.Name)" }
         catch { Write-Warning "[test] removing pack $($d.Name) failed: $_" }
     }

@@ -105,7 +105,12 @@ function OpenEditor {
         if ($screen -eq 'start' -or $screen -eq 'editor') { return $screen }
         Write-Host "[test] editor not up yet ($screen), asking again"
         Start-Sleep -Seconds 2
-        $null = @(& python -I $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+        $answer = @(& python -I $s1 --slot $Slot run shstart doodesch.personify 2>&1 | ForEach-Object { "$_" })
+    }
+    Write-Host "[test] last shstart answer: $($answer -join ' | ')"
+    if ($screen -ne 'start' -and $screen -ne 'editor') {
+        Select-String -LiteralPath $script:log -Pattern 'SideHustle|Personify|Sideload' | Select-Object -Last 15 |
+            ForEach-Object { Write-Host "[test] log: $($_.Line)" }
     }
     return $screen
 }
@@ -119,7 +124,9 @@ $packsDir = Join-Path $script:gameRoot 'UserData\Personnel\Packs'
 try {
     if (-not $NoBoot) {
         $argv = @('-NoProfile', '-File', $session, '-Slot', $Slot, '-Profile', $Profile, '-Save', "$Save", '-NoApp',
-                  '-Build', "$checkout,$Personnel", '-Mods', 'SideHustle')
+                  '-Build', "$checkout,$Personnel")
+        # Profile main already carries Side Hustle like the real install and takes only store mods in -Mods.
+        if ($Profile -eq 'stack') { $argv += @('-Mods', 'SideHustle') }
         Write-Host "[test] session.ps1 $($argv[3..($argv.Count - 1)] -join ' ')"
         & pwsh @argv
         if ($LASTEXITCODE -ne 0) { throw "session.ps1 failed with exit code $LASTEXITCODE" }
@@ -154,6 +161,7 @@ try {
     $null = Eval "JSON.stringify(call('projects.delete', '$copyName'))"
     $made = EvalJson "JSON.stringify(call('templates.newProject', {id: '$Target', name: '$copyName'}))"
     Check 'template copy makes a project' ([bool]$made.ok) "folder $($made.folder)"
+    $script:copyFolder = $made.folder
     $null = Eval "openProject('$($made.folder)'); 'ok'"
     $c = EvalJson "JSON.stringify((n => ({id: n.id, name: n.name, replaces: n.replaces || null, hair: (n.appearance||{}).hairPath || '', cut: (n.dealer||{}).cut, voice: (n.voice||{}).from || '', layers: ((n.appearance||{}).bodyLayers||[]).map(l => l.path)}))(npcs()[0]))"
     $vanCut = $tTarget.npc.dealer.cut
@@ -207,6 +215,13 @@ try {
     $errs = @((ReadLogFrom 0) -split "`r?`n" | Where-Object { $_ -match '\[(Personify|Personnel)\].*(ERROR|\[E\]|Exception)' })
     Check 'no Personify or Personnel errors in the log' ($errs.Count -eq 0) "$($errs.Count) line(s): $(($errs | Select-Object -First 3) -join ' | ')"
 } finally {
+    # The template copy and the replacing project are test projects and leave with the test.
+    foreach ($proj in @($script:copyFolder, $editPack) | Where-Object { $_ }) {
+        $dir = Join-Path $script:gameRoot "UserData\Personify\Projects\$proj"
+        if (-not (Test-Path -LiteralPath $dir)) { Write-Host "[test] project $proj is already gone"; continue }
+        try { Remove-Item -LiteralPath $dir -Recurse -Force; Write-Host "[test] removed project $proj" }
+        catch { Write-Warning "[test] removing project $proj failed: $_" }
+    }
     if (-not $NoBoot) { try { StopSlotGame } catch { Write-Warning "[test] stopping the game failed: $_" } }
     # The slot is rebuilt from the stack on the next start; the installed test pack and projects go with it.
     if (-not $script:installedPacks) { Write-Host '[test] no installed test pack to remove' }

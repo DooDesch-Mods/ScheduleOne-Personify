@@ -295,6 +295,7 @@ namespace Personify.Host
             On("templates.list", _ => TemplatesBridge.List());
             On("templates.editVanilla", a => TemplatesBridge.EditVanilla(a));
             On("templates.newProject", a => { var o = Obj(a); return TemplatesBridge.NewFromTemplate((string)o["id"], (string)o["name"]); });
+            On("cards.remixInstalled", a => CardsBridge.RemixInstalled(a));
             On("vault.state", _ => CardsBridge.VaultState());
             On("vault.connect", _ => CardsBridge.VaultConnect());
             On("vault.disconnect", _ => CardsBridge.VaultDisconnect());

@@ -1026,6 +1026,7 @@ function renderCardsTab(sc) {
     if (c.replaces) tx.appendChild(el('div', 'ptag', t('Replaces {name}', { name: templateName(c.replaces) })));
     r.appendChild(tx);
     r.appendChild(btn(c.replaces ? t('Change target') : t('Replace a town NPC'), 'sm', () => cardTargetDialog(c), 'user'));
+    r.appendChild(ibtn('remix', t('Remix as new project'), () => remixInstalled(c.code), 'ghost'));
     r.appendChild(ibtn('trash', t('Remove'), () => confirmDialog(t('Remove {name}?', { name: c.name || c.code }),
       t('Saves that contain this NPC lose it the next time they load.'), t('Remove'), () => {
         const res = call('cards.remove', c.code);
@@ -1056,6 +1057,13 @@ function installCardFile(path) {
     return;
   }
   cardTargetDialog(c, done);
+}
+
+function remixInstalled(code) {
+  const r = call('cards.remixInstalled', code);
+  if (!r || r.ok === false) { toast((r && r.text) || errText(r && r.error), 'bad'); return; }
+  console.log('[personify] remix of installed card ' + code + ' started in ' + r.folder);
+  openProject(r.folder);
 }
 
 function remixCard(path) {

@@ -278,6 +278,7 @@ namespace Personify.Host
             On("cards.folders", _ => CardsBridge.Folders());
             On("cards.openFolder", a => CardsBridge.OpenFolder(a));
             On("cards.remix", a => CardsBridge.Remix(a));
+            On("cards.remixInstalled", a => CardsBridge.RemixInstalled(a));
             On("vault.state", _ => CardsBridge.VaultState());
             On("vault.connect", _ => CardsBridge.VaultConnect());
             On("vault.disconnect", _ => CardsBridge.VaultDisconnect());

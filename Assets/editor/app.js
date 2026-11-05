@@ -1022,6 +1022,7 @@ function renderCardsTab(sc) {
     tx.appendChild(el('div', 'psub', bits.join(' · ')));
     if (c.basedOn) tx.appendChild(el('div', 'ptag', t('Remix of {code}', { code: String(c.basedOn).toUpperCase() })));
     r.appendChild(tx);
+    r.appendChild(ibtn('remix', t('Remix as new project'), () => remixInstalled(c.code), 'ghost'));
     r.appendChild(ibtn('trash', t('Remove'), () => confirmDialog(t('Remove {name}?', { name: c.name || c.code }),
       t('Saves that contain this NPC lose it the next time they load.'), t('Remove'), () => {
         const res = call('cards.remove', c.code);
@@ -1040,6 +1041,13 @@ function installCardFile(path) {
   console.log('[personify] card ' + r.code + ' installed from ' + path + (r.alreadyInstalled ? ' (already there)' : ''));
   toast(r.alreadyInstalled ? t('{name} is already in your game.', { name: r.name }) : t('{name} added. Restart the game to meet them.', { name: r.name }), 'ok');
   if (ui.screen === 'start') goStart();
+}
+
+function remixInstalled(code) {
+  const r = call('cards.remixInstalled', code);
+  if (!r || r.ok === false) { toast((r && r.text) || errText(r && r.error), 'bad'); return; }
+  console.log('[personify] remix of installed card ' + code + ' started in ' + r.folder);
+  openProject(r.folder);
 }
 
 function remixCard(path) {

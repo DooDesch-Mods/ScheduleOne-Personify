@@ -580,6 +580,87 @@ namespace Personify.Host
             return new JObject { ["ok"] = true, ["folder"] = p.Folder };
         }
 
+        /// <summary>
+        /// Starts a new project from a card that is already in the game. Personnel keeps no card file for it, only the
+        /// NPC in its Cards pack with the contact picture and layer pictures under "&lt;code&gt;/", so the project is built
+        /// from there. The NPC gets an id of its own, since the installed card keeps "card_&lt;code&gt;".
+        /// Answers <c>{ ok, folder }</c>.
+        /// </summary>
+        internal static JObject RemixInstalled(string code)
+        {
+            code = (code ?? "").Trim();
+            if (code.Length == 0 || !code.All(char.IsLetterOrDigit))
+            {
+                Core.Log.Warning($"[cards] remix of installed card '{code}' refused: not a card code.");
+                return Calls.Fail("not_a_card");
+            }
+            string packDir = Path.Combine(GameData.PacksRoot, "Cards");
+            string manifestPath = Path.Combine(packDir, "manifest.json");
+            JObject manifest;
+            try { manifest = JObject.Parse(File.ReadAllText(manifestPath)); }
+            catch (Exception e) { Core.Log.Warning($"[cards] remix of installed card {code}: reading {manifestPath} failed: {e.Message}"); return Calls.Fail("read_failed"); }
+            var source = (manifest["npcs"] as JArray)?.OfType<JObject>()
+                .FirstOrDefault(o => string.Equals((string)o["extensions"]?["card"]?["code"], code, StringComparison.OrdinalIgnoreCase));
+            if (source == null)
+            {
+                Core.Log.Warning($"[cards] remix of installed card {code}: no NPC with that card code in {manifestPath}.");
+                return Calls.Fail("not_a_card");
+            }
+
+            var npc = (JObject)source.DeepClone();
+            var ext = npc["extensions"]?["card"] as JObject;
+            string contentHash = (string)ext?["contentHash"];
+            ((JObject)npc["extensions"]).Remove("card");
+            if (!((JObject)npc["extensions"]).HasValues) npc.Remove("extensions");
+            npc.Remove("saveId");
+            string name = (string)npc["name"] ?? "Card NPC";
+            var p = ProjectFiles.Create(name, null);
+            if (p == null) return Calls.Fail("create_failed");
+            string id = NpcFactory.FreeId(p, name);
+            npc["id"] = id;
+
+            string cardDir = Path.GetFullPath(Path.Combine(packDir, code));
+            byte[] ReadPackFile(string rel, string what)
+            {
+                string abs = Path.GetFullPath(Path.Combine(packDir, rel.Replace('/', Path.DirectorySeparatorChar)));
+                if (!abs.StartsWith(cardDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                {
+                    Core.Log.Warning($"[cards] remix of installed card {code}: {what} '{rel}' is outside the card folder - left out.");
+                    return null;
+                }
+                try { return File.ReadAllBytes(abs); }
+                catch (Exception e) { Core.Log.Warning($"[cards] remix of installed card {code}: reading {what} '{rel}' failed: {e.Message} - left out."); return null; }
+            }
+
+            if ((string)npc["portrait"] is string portraitRel && portraitRel.Length > 0
+                && ReadPackFile(portraitRel, "contact picture") is byte[] portrait)
+            {
+                Write(p, "portraits/" + id + ".png", portrait);
+                npc["portrait"] = "portraits/" + id + ".png";
+            }
+            else npc.Remove("portrait");
+            int layerCount = 0;
+            foreach (string list in new[] { "faceLayers", "bodyLayers" })
+                if (npc["appearance"]?[list] is JArray arr)
+                    for (int i = arr.Count - 1; i >= 0; i--)
+                    {
+                        if (!(arr[i] is JObject l) || !((string)l["file"] is string file) || file.Length == 0) continue;
+                        byte[] data = ReadPackFile(file, "layer picture");
+                        if (data == null) { arr.RemoveAt(i); continue; }
+                        string rel = "sources/" + Path.GetFileName(file);
+                        Write(p, rel, data);
+                        l["file"] = rel;
+                        layerCount++;
+                    }
+
+            var block = PackProject.EditorBlock(npc);
+            block["remixOf"] = new JObject { ["code"] = code, ["contentHash"] = contentHash, ["name"] = name };
+            ((JArray)p.Manifest["npcs"]).Add(npc);
+            if (!ProjectFiles.Save(p, snapshot: false)) return Calls.Fail("create_failed");
+            Core.Log.Msg($"[cards] remix of installed card {code} ('{name}') started as project '{p.Folder}' (npc {id}, {layerCount} layer picture(s)).");
+            return new JObject { ["ok"] = true, ["folder"] = p.Folder };
+        }
+
         private static void Write(PackProject p, string rel, byte[] data)
         {
             string abs = Path.Combine(p.Dir, rel.Replace('/', Path.DirectorySeparatorChar));

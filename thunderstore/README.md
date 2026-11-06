@@ -46,7 +46,7 @@
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.
-- **S1API**, **Side Hustle**, **Sideload** 1.36.0+ and **Personnel** 2.6.0+ (pulled in as dependencies).
+- **S1API**, **Side Hustle**, **Sideload** 1.36.4+ and **Personnel** 2.6.2+ (pulled in as dependencies).
 - Optional: **Inkorporated** (tattoo packs in the editor).
 
 ## Usage

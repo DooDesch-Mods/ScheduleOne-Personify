@@ -75,8 +75,8 @@
 | MelonLoader | `0.7.3+` |
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
 | Side Hustle | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2232) `3.2.1+` - the hub the editor opens from |
-| Sideload | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) `1.36.0+` - draws the editor and the phone app |
-| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.6.0+` - runs your NPCs in the game |
+| Sideload | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) `1.36.4+` - draws the editor and the phone app |
+| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.6.2+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation

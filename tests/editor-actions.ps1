@@ -13,13 +13,15 @@
     - Personnel answers the card calls: exported and installed card lists are arrays.
   The pack menu is only opened, never confirmed: removing an installed pack would change the slot. The throwaway
   project is deleted at the end and the game is stopped. Run from anywhere:
-    pwsh -File <Personify checkout>/tests/editor-actions.ps1 [-Slot mptest] [-NoBoot]
+    pwsh -File <Personify checkout>/tests/editor-actions.ps1 [-Slot mptest] [-Sideload _wt-Sideload-x] [-NoBoot]
   -NoBoot uses the game already running in the slot (Debug Side Hustle, main menu).
 #>
 [CmdletBinding()]
 param(
     [ValidateSet('mptest', 'mptest2', 'mptest3', 'mptest4', 'mptest5', 'mptest6')]
     [string]$Slot = 'mptest',
+    # A Sideload checkout or worktree to build into the slot instead of the stack's Sideload.
+    [string]$Sideload = '',
     [switch]$NoBoot
 )
 
@@ -69,7 +71,8 @@ function StopSlotGame {
 
 try {
     if (-not $NoBoot) {
-        $argv = @('-NoProfile', '-File', $session, '-Slot', $Slot, '-Save', '0', '-NoApp', '-Build', $checkout, '-Mods', 'SideHustle,Personnel,NpcCards')
+        $builds = if ($Sideload) { "$checkout,$Sideload" } else { $checkout }
+        $argv = @('-NoProfile', '-File', $session, '-Slot', $Slot, '-Save', '0', '-NoApp', '-Build', $builds, '-Mods', 'SideHustle,Personnel,NpcCards')
         Write-Host "[test] session.ps1 $($argv[3..($argv.Count - 1)] -join ' ')"
         & pwsh @argv
         if ($LASTEXITCODE -ne 0) { throw "session.ps1 failed with exit code $LASTEXITCODE" }

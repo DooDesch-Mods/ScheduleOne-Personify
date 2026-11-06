@@ -3,6 +3,18 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-11-06
+
+### Fixed
+
+- "Unlocked from the start" shows whether the NPC starts unlocked. It showed off for customers without connections,
+  and flipping it on and off locked them.
+- The warning about a locked customer without connections only shows when the customer is set to start locked.
+- Buttons in the editor react on the first click (with Sideload 1.36.4).
+
+### Changed
+
+- Needs Personnel 2.6.2 and Sideload 1.36.4.
 ## [2.3.0] - 2026-11-05
 
 ### Added

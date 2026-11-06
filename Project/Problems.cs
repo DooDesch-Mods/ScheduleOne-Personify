@@ -272,23 +272,25 @@ namespace Personify.Project
         {
             var rel = n["relationships"] as JObject;
             var conns = rel?["connections"] as JArray;
-            int count = 0;
+            int reachable = 0;
             if (conns != null)
                 foreach (var c in conns)
                 {
                     string cid = (string)c;
                     if (string.IsNullOrWhiteSpace(cid)) continue;
-                    count++;
                     if (string.Equals(cid, id, StringComparison.OrdinalIgnoreCase))
                         Add(list, "warning", "connection_self", i, "relations", "relationships.connections", cid, "The NPC lists itself as a connection.");
                     else if (known != null && !own.Contains(cid) && !known.ContainsKey(cid))
                         Add(list, "warning", "connection_unknown", i, "relations", "relationships.connections", cid, $"Connection '{cid}' is not in the game or this pack.");
+                    else reachable++;
                 }
 
-            bool unlocked = (bool?)rel?["unlocked"] ?? false;
-            if (Role(n) == "customer" && !unlocked && count == 0)
-                Add(list, "warning", "customer_no_connection", i, "relations", "relationships.connections", null,
-                    "A locked customer without connections never takes a sample.");
+            // Personnel unlocks a customer without a connection in the game unless the pack sets unlocked=false
+            // (API.ResolveCustomerUnlocked, Spawn.ConnectionUnlockGuard). Vanilla opens a locked customer only through
+            // an unlocked connection, so only the explicit false leaves it locked for good.
+            if (Role(n) == "customer" && (bool?)rel?["unlocked"] == false && reachable == 0)
+                Add(list, "warning", "customer_no_connection", i, "relations", "relationships.unlocked", null,
+                    "A customer locked from the start needs a connection in the game, or it can never be unlocked.");
         }
 
         private static void Add(List<Problem> list, string severity, string code, int npc, string area, string field, string arg, string text)

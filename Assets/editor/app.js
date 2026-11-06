@@ -3541,13 +3541,42 @@ function stepNumber(body, label, s, key, edit, whole) {
 function buildRelations(box, n) {
   section(box, 'rel', T('Relationship'), b => {
     slider(b, T('Start relation'), 'relationships.delta', { min: 0, max: 5, step: 0.1, def: 0, ends: [T('Hostile'), T('Loyal')] });
-    toggle(b, T('Unlocked from the start'), 'relationships.unlocked', false);
+    unlockedToggle(b);
     segRow(b, T('Unlocked by'), 'relationships.unlockType', [['Recommendation', T('Recommendation')], ['DirectApproach', T('Direct approach')]], 'Recommendation');
   }, true);
   section(box, 'conn', T('Connections'), b => connectionFields(b, n), true);
 }
 
-// Everyone this NPC can be connected to: the game's NPCs (vanilla and other mods) and this project's NPCs.
+// Personnel's start state when relationships.unlocked is unset (Personnel API.ConfigureFromDef): a customer starts
+// locked exactly when it lists connections, every other role starts unlocked unless contact.visible is false.
+function defaultUnlocked(n) {
+  if (!n) return true;
+  const conv = String((n.behavior && n.behavior.conversation) || '').toLowerCase();
+  const role = roleOf(n);
+  if (role === 'customer' || (role === 'civilian' && conv === 'customer')) {
+    const conns = (n.relationships && n.relationships.connections) || [];
+    return !conns.some(c => typeof c === 'string' && c.trim());
+  }
+  return !(n.contact && n.contact.visible === false);
+}
+
+function effectiveUnlocked(n) {
+  const v = getPath(n, 'relationships.unlocked');
+  return typeof v === 'boolean' ? v : defaultUnlocked(n);
+}
+
+// The switch shows what Personnel will do, so an unset value reads as its rule and stays unset until it is flipped.
+function unlockedToggle(box) {
+  const vals = targets().map(id => effectiveUnlocked(npcById(id)));
+  const mixed = vals.some(v => v !== vals[0]);
+  const row = frow(box, T('Unlocked from the start'), 'relationships.unlocked');
+  row.appendChild(el('div', 'sp'));
+  if (mixed) mixedTag(row);
+  row.appendChild(sw(!!vals[0], on => write([{ path: 'relationships.unlocked', value: on }]), mixed));
+  return row;
+}
+
+// Everyone this NPC can be connected to:the game's NPCs (vanilla and other mods) and this project's NPCs.
 function connectionChoices() {
   const out = [];
   const own = new Set(npcs().map(x => x.id));

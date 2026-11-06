@@ -88,8 +88,23 @@ try
     var bp = Problems.Check(bad, new List<KnownNpc> { new KnownNpc { id = "kyle_cooley", name = "Kyle Cooley", source = "vanilla" } });
     var codes = new HashSet<string>(bp.ConvertAll(x => x.code));
     foreach (string c in new[] { "npc_id_duplicate", "file_missing", "roles_conflict", "dealer_no_home", "npc_id_invalid", "npc_name_missing",
-                                  "connection_unknown", "customer_no_connection", "npc_id_taken", "supplier_no_items", "supplier_not_physical" })
+                                  "connection_unknown", "npc_id_taken", "supplier_no_items", "supplier_not_physical" })
         Check("problem " + c, codes.Contains(c));
+    // customer_no_connection follows Personnel: only an explicit unlocked=false without a reachable connection locks for good.
+    var locks = ProjectFiles.Create("Locks", "");
+    locks.Npcs.Add(new JObject { ["id"] = "lock_unset", ["name"] = "A", ["customer"] = new JObject() });
+    locks.Npcs.Add(new JObject { ["id"] = "lock_false", ["name"] = "B", ["customer"] = new JObject(), ["relationships"] = new JObject { ["unlocked"] = false } });
+    locks.Npcs.Add(new JObject { ["id"] = "lock_ghost", ["name"] = "C", ["customer"] = new JObject(), ["relationships"] = new JObject { ["unlocked"] = false, ["connections"] = new JArray("ghost") } });
+    locks.Npcs.Add(new JObject { ["id"] = "lock_kyle", ["name"] = "D", ["customer"] = new JObject(), ["relationships"] = new JObject { ["unlocked"] = false, ["connections"] = new JArray("kyle_cooley") } });
+    locks.Npcs.Add(new JObject { ["id"] = "lock_dealer", ["name"] = "E", ["dealer"] = new JObject { ["home"] = "Pawn Shop" }, ["relationships"] = new JObject { ["unlocked"] = false } });
+    var lp = Problems.Check(locks, new List<KnownNpc> { new KnownNpc { id = "kyle_cooley", name = "Kyle Cooley", source = "vanilla" } });
+    bool LockWarn(int npc) => lp.Exists(x => x.code == "customer_no_connection" && x.npc == npc);
+    Check("unset customer without connections starts unlocked, no warning", !LockWarn(0));
+    Check("locked customer without connections warns", LockWarn(1));
+    Check("locked customer with only unknown connections warns", LockWarn(2));
+    Check("locked customer with a game connection does not warn", !LockWarn(3));
+    Check("locked dealer gets no customer warning", !LockWarn(4));
+
     var noCat = Problems.Check(bad, null);
     Check("without a catalog no connection_unknown", !noCat.Exists(x => x.code == "connection_unknown"));
 

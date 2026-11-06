@@ -2,6 +2,13 @@
 
 > 🛟 **Need help or found a bug?** Get support at [support.doodesch.de/personify](https://support.doodesch.de/personify).
 
+> ⚠️ **A required mod is missing on Thunderstore?** Thunderstore sometimes takes one of my library mods off its listing, and then r2modman and Gale can't install it. Get it from Nexus Mods or GitHub instead and put the DLL into the `Mods` folder of your profile. Stuck? Ask in the [Discord](https://mods.doodesch.de).
+>
+> - **SideHustle:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2232) · [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-SideHustle/releases/latest)
+> - **Sideload:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) · [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-Sideload/releases/latest)
+> - **Personnel:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) · [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-Personnel/releases/latest)
+> - **WhatsDab:** [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2361) · [GitHub](https://github.com/DooDesch-Mods/ScheduleOne-WhatsDab/releases/latest)
+
 > **Build your own NPCs inside the game** - look, role, daily routine and contacts - with a live 3D
 > preview, test them next to you in your save, and publish a ready-to-upload **Personnel** NPC pack.
 > Opens from the **Side Hustle** hub on the main menu.

@@ -2960,6 +2960,13 @@ const STANDARDS = [['VeryLow', T('Very low')], ['Low', T('Low')], ['Moderate', T
 const DRUGS = [['marijuana', T('Weed')], ['methamphetamine', T('Meth')], ['cocaine', T('Cocaine')], ['mdma', T('MDMA')], ['shrooms', T('Shrooms')], ['heroin', T('Heroin')]];
 const CONVERSATIONS = [['none', T('Plain')], ['customer', T('Customer')], ['dealer', T('Dealer')]];
 
+// Vanilla weapons a Personnel NPC can fight with (behavior.weapon); the values are Personnel's weapon names.
+const WEAPONS = [
+  ['fists', T('Fists')], ['baton', T('Baton')], ['brokenbottle', T('Broken bottle')], ['knife', T('Knife')],
+  ['m1911', T('Pistol')], ['m1911_gold', T('Gold pistol')], ['revolver', T('Revolver')],
+  ['pumpshotgun', T('Shotgun')], ['taser', T('Taser')]
+];
+
 // Customer profiles: one click sets spending, orders per week and standards together.
 const PROFILES = [
   ['casual', T('Casual'), { spending: { min: 100, max: 300 }, ordersPerWeek: { min: 1, max: 2 }, standards: 'Low' }],
@@ -3031,6 +3038,8 @@ function buildRole(box, n) {
   section(box, 'character', T('Character'), b => {
     if (st.expert) slider(b, T('Health'), 'behavior.maxHealth', { min: 1, max: 1000, def: 100, whole: true });
     slider(b, T('Aggression'), 'behavior.aggression', { min: 0, max: 1, def: 0, fmt: pct, ends: [T('Calm'), T('Aggressive')] });
+    toggle(b, T('Hostile'), 'behavior.hostile', false);
+    selectRow(b, T('Weapon'), 'behavior.weapon', WEAPONS.map(([v, l]) => [v, t(l)]), 'fists');
     slider(b, T('Scale'), 'behavior.scale', { min: 0.25, max: 4, def: 1, xmin: 0.05, xmax: 10, ends: [T('Small'), T('Large')] });
     selectRow(b, T('Conversation'), 'behavior.conversation', CONVERSATIONS.map(([v, l]) => [v, t(l)]), 'none');
   }, role !== 'customer' && role !== 'dealer' && role !== 'supplier');

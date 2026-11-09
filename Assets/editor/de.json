@@ -608,5 +608,15 @@
   "Replace a town NPC": "NPC der Stadt ersetzen",
   "Copy of a town NPC": "Kopie eines NPCs der Stadt",
   "Look, clothing, voice and role values of an NPC from the game.": "Aussehen, Kleidung, Stimme und Rollenwerte eines NPCs aus dem Spiel.",
-  "Replaces {name}. Name, routine, home and connections stay from the game.": "Ersetzt {name}. Name, Tagesablauf, Zuhause und Kontakte bleiben aus dem Spiel."
+  "Replaces {name}. Name, routine, home and connections stay from the game.": "Ersetzt {name}. Name, Tagesablauf, Zuhause und Kontakte bleiben aus dem Spiel.",
+  "Weapon": "Waffe",
+  "Fists": "Fäuste",
+  "Baton": "Schlagstock",
+  "Broken bottle": "Abgebrochene Flasche",
+  "Knife": "Messer",
+  "Pistol": "Pistole",
+  "Gold pistol": "Goldene Pistole",
+  "Revolver": "Revolver",
+  "Shotgun": "Schrotflinte",
+  "Taser": "Taser"
 }

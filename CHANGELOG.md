@@ -3,6 +3,16 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-11-09
+
+### Added
+
+- Hostile toggle and Weapon picker in the Character section. Needs Personnel 2.7.0.
+
+### Changed
+
+- The Thunderstore page links the required mods on Nexus Mods and GitHub, for when Thunderstore can't install them.
+
 ## [2.3.1] - 2026-11-06
 
 ### Fixed

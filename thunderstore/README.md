@@ -13,12 +13,12 @@
 > preview, test them next to you in your save, and publish a ready-to-upload **Personnel** NPC pack.
 > Opens from the **Side Hustle** hub on the main menu.
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue)
+![Version](https://img.shields.io/badge/version-2.4.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.5.0+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.7.0+-yellow)
 [![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de) [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att__UBMoZFtan-9mcpLrV0w2SGJ/badge.svg)](https://mlvscan.com/attestations/att__UBMoZFtan-9mcpLrV0w2SGJ)
@@ -53,7 +53,7 @@
 ## Requirements
 
 - **Schedule I** (IL2CPP) with **MelonLoader 0.7.3+**.
-- **S1API**, **Side Hustle**, **Sideload** 1.36.4+ and **Personnel** 2.6.2+ (pulled in as dependencies).
+- **S1API**, **Side Hustle**, **Sideload** 1.36.4+ and **Personnel** 2.7.0+ (pulled in as dependencies).
 - Optional: **Inkorporated** (tattoo packs in the editor).
 
 ## Usage

@@ -9,13 +9,13 @@
 > [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
 > [Side Hustle](https://www.nexusmods.com/schedule1/mods/2232) hub on the main menu.
 
-![Version](https://img.shields.io/badge/version-2.3.0-blue)
+![Version](https://img.shields.io/badge/version-2.4.0-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)
 ![SideHustle](https://img.shields.io/badge/Side%20Hustle-required-yellow)
 ![Sideload](https://img.shields.io/badge/Sideload-1.36.0+-yellow)
-![Personnel](https://img.shields.io/badge/Personnel-2.6.0+-yellow)
+![Personnel](https://img.shields.io/badge/Personnel-2.7.0+-yellow)
 [![Discord](https://mods.doodesch.de/img/badge.svg)](https://mods.doodesch.de) [![Polyfill](https://polyfill.doomods.com/badge/personify.svg)](https://polyfill.doomods.com/mod/personify)
 
 [![MLVScan Personify.dll](https://mlvscan.com/attestations/att__UBMoZFtan-9mcpLrV0w2SGJ/badge.svg)](https://mlvscan.com/attestations/att__UBMoZFtan-9mcpLrV0w2SGJ)
@@ -76,7 +76,7 @@
 | S1API | [ifBars/S1API_Forked](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) `3.2.1+` |
 | Side Hustle | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2232) `3.2.1+` - the hub the editor opens from |
 | Sideload | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2360) `1.36.4+` - draws the editor and the phone app |
-| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.6.2+` - runs your NPCs in the game |
+| Personnel | [Nexus Mods](https://www.nexusmods.com/schedule1/mods/2275) `2.7.0+` - runs your NPCs in the game |
 | Inkorporated | optional - its tattoo packs show up in the tattoo picker |
 
 ## Installation

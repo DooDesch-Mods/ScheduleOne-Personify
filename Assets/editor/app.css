@@ -417,11 +417,16 @@ textarea.inp { height: 72px; padding: 9px 12px; }
 
 .scrim, .mscrim { position: fixed; left: 0; top: 0; right: 0; bottom: 0; }
 .scrim { background-color: rgba(0, 0, 0, .66); align-items: center; justify-content: center; }
-.dialog { width: 620px; max-height: 86%; padding: 22px 24px; gap: 14px; border-radius: 16px; background-color: var(--glass); box-shadow: 0 18px 40px rgba(0, 0, 0, .55); }
+/* The surface counts device pixels, so 760px does not fit a window under about 884 px and the 86% cap takes over.
+   flex-direction makes the dialog shrink its list (flex-grow: 1; min-height: 0) at the cap; without it Sideload
+   treats the dialog as a block and the button row overflows below it. min-height: 0 drops the automatic minimum,
+   which Sideload up to 1.36.6 raised to the 760px height and then failed on (Sideload#123: empty picker). */
+.dialog { flex-direction: column; width: 620px; min-height: 0; max-height: 86%; padding: 22px 24px; gap: 14px; border-radius: 16px; background-color: var(--glass); box-shadow: 0 18px 40px rgba(0, 0, 0, .55); }
 .dialog.small { width: 480px; }
 .dialog.medium { width: 600px; }
 .dialog.tall { width: 640px; height: 760px; }
 .dialog.fit { width: 640px; max-height: 760px; }
+@media (max-height: 884px) { .dialog.fit { max-height: 86%; } }
 .dh { flex-direction: row; align-items: center; gap: 10px; }
 .dt { font-size: 22px; font-weight: 800; }
 .dsub { color: var(--mu); font-size: 14px; }

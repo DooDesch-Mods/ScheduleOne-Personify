@@ -9,7 +9,7 @@
 > [Personnel](https://www.nexusmods.com/schedule1/mods/2275) NPC pack. Opens from the
 > [Side Hustle](https://www.nexusmods.com/schedule1/mods/2232) hub on the main menu.
 
-![Version](https://img.shields.io/badge/version-2.4.0-blue)
+![Version](https://img.shields.io/badge/version-2.4.1-blue)
 ![Game](https://img.shields.io/badge/game-Schedule%20I-purple)
 ![MelonLoader](https://img.shields.io/badge/MelonLoader-0.7.3+-green)
 ![S1API](https://img.shields.io/badge/S1API-required-orange)

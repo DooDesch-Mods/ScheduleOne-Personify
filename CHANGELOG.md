@@ -3,6 +3,13 @@
 All notable changes to Personify are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] - 2026-11-21
+
+### Fixed
+
+- The hair, clothing and item picker is no longer empty on a small game window (for example 1280x720), and its
+  buttons stay inside the dialog.
+
 ## [2.4.0] - 2026-11-09
 
 ### Added
